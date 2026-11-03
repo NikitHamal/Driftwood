@@ -1,16 +1,27 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>Driftwood — Survival at Sea</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
-<style>/*CSS*/</style></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#0b2a3a">
+  <meta name="description" content="Driftwood — a physically-based 3D ocean survival and building game built with Three.js.">
+  <title>Driftwood — Survival at Sea</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="./assets/fonts/outfit-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
 <body>
 <canvas id="c"></canvas>
 <div id="vignette"></div>
-<div id="loading"><div class="load-logo">Driftwood</div><div class="load-bar"><i id="loadFill"></i></div><div class="load-tip" id="loadTip">Gathering the clouds…</div></div>
+<div id="loading">
+  <div class="load-logo">Driftwood</div>
+  <div class="load-bar"><i id="loadFill"></i></div>
+  <div class="load-tip" id="loadTip">Gathering the clouds…</div>
+</div>
 <section id="title" class="screen" hidden>
   <div class="title-left">
-    <div class="logo"><div class="logo-badge">D</div><div><h1>Driftwood</h1><p>A cozy survival tale on an endless sea</p></div></div>
+    <div class="logo"><div class="logo-badge" id="logoBadge"></div><div><h1>Driftwood</h1><p>A survival tale on an endless sea</p></div></div>
     <nav class="menu" id="mainMenu">
       <button class="mbtn" data-act="continue" id="btnContinue"><span class="mb-t">Continue</span><span class="mb-s" id="contInfo"></span></button>
       <button class="mbtn" data-act="new"><span class="mb-t">New World</span><span class="mb-s">Begin a fresh voyage</span></button>
@@ -18,7 +29,7 @@
       <button class="mbtn" data-act="howto"><span class="mb-t">How to Play</span><span class="mb-s">Controls and survival tips</span></button>
     </nav>
   </div>
-  <div class="title-foot"><span>v1.0</span><span>Built with Three.js</span></div>
+  <div class="title-foot"><span>v2.0</span><span>Built with Three.js</span></div>
 </section>
 <section id="hud" hidden>
   <div id="clock" class="glass"><div class="clk-ico" id="clkIco"></div><div><div class="clk-day" id="clkDay">Day 1</div><div class="clk-time"><span id="clkTime">07:00</span><span class="dot">•</span><span id="clkWx">Clear</span></div><div class="rn"><b id="rnL">Renown 1</b><i><s id="rnB"></s></i></div></div></div>
@@ -28,16 +39,19 @@
   <div id="pickups"></div>
   <div id="banner"></div>
   <div id="markers"></div>
+  <div id="cross" hidden><i></i></div>
   <div id="prompt"></div>
   <div id="buildbar" class="glass" hidden></div>
   <div id="hotbar"></div>
   <div id="fishbar" hidden><div class="fb-title" id="fbTitle">Reel it in!</div><div class="fb-track"><div class="fb-zone" id="fbZone"></div><div class="fb-mark" id="fbMark"></div></div><div class="fb-hint">Click or press <kbd>Space</kbd> in the green zone</div></div>
   <div id="tooltip"></div>
-  <div id="hint">WASD move · Drag to look · Scroll zoom · <b>E</b> interact · <b>Tab</b> bag · <b>C</b> camera</div>
+  <div id="zoomInd" hidden><i></i><span>1.0×</span></div>
+  <div id="hint"></div>
   <div id="joy" hidden><div id="joyKnob"></div></div><button id="mobUse" hidden>E</button>
 </section>
 <div id="fps" hidden></div>
 <div id="modals"></div>
 <div id="fade"></div>
-<script>/*JS*/</script>
-</body></html>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
