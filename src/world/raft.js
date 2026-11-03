@@ -1,6 +1,7 @@
 import * as THREE from '../../vendor/three.module.js';
-import { BP, DECK, makeCrop, makeHouse, makeStation, MAT } from './models.js';
+import { BP, DECK, makeCrop, makeStation, MAT } from './models.js';
 import { rng } from '../core/util.js';
+import { House } from './house.js';
 
 export const T = 2.4;
 const DIRS = [
@@ -23,12 +24,7 @@ export class Raft {
       m.receiveShadow = true;
       this.group.add(m);
     }
-    const h = makeHouse();
-    h.inRoom = h.inRoom || (() => false);
-    h.occluders = h.occluders || [];
-    h.update = h.update || (() => {});
-    this.house = h;
-    this.group.add(h.group);
+    this.house = new House(this.group, 1);
     this.tiles = new Set();
     this.bmap = new Map();
     this.health = new Map();
@@ -210,9 +206,7 @@ export class Raft {
   }
   // collision
   walkable(x, z, level = 0, rad = 0.28) {
-    if (level === 1) {
-      return x > -1.32 && x < 1.32 && z > 0.55 && z < 1.3;
-    }
+    if (level === 1) return this.house.walkable(x, z, rad);
     const i = Math.round(x / T),
       j = Math.round(z / T);
     if (!this.has(i, j)) return false;

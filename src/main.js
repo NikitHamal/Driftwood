@@ -1,3 +1,4 @@
+import { ICON } from './ui/icon-set.js';
 // Driftwood entry point: boots the stage, builds the UI, starts the loop and exposes a debug handle.
 import { $, setLoad } from './ui/dom.js';
 import { applyQuality, audio, camera, raft, renderer, scene, settings } from './render/stage.js';
@@ -21,6 +22,7 @@ import { sh } from './world/shark.js';
 import { boatS } from './world/trader.js';
 import { cam } from './input/camera.js';
 
+$('#logoBadge').innerHTML = ICON.boat;
 buildHUD();
 applyState();
 PA.hold = 'rod';
@@ -80,6 +82,14 @@ window.__dw = {
   },
   get act() {
     return G.curAct;
+  },
+  house(level = 3, x = 0.3, z = 0.0, yaw = 0.7) {
+    G.st.house = level;
+    raft.house.setLevel(level);
+    pl.l = 1;
+    pl.x = x;
+    pl.z = z;
+    cam.tyaw = cam.yaw = yaw;
   },
   build(type, i, j) {
     G.bsel = type;

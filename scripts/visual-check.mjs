@@ -39,7 +39,7 @@ await page.waitForTimeout(2500);
 const setTime = (t) => ev((t) => { window.__dw.st.clock = Math.floor(window.__dw.st.clock) + t; }, t);
 if (steps.includes('day')) { await setTime(0.45); await page.waitForTimeout(2500); await shot('02-day-third'); }
 if (steps.includes('fp')) { await ev(() => { window.__dw.cam.tyaw = 0.6; }); await page.keyboard.press('KeyC'); await page.keyboard.press('KeyC'); await page.keyboard.press('KeyC'); await page.waitForTimeout(2500); await shot('03-fp'); }
-if (steps.includes('house')) { await ev(() => window.__dw.__house && window.__dw.__house()); await page.waitForTimeout(2500); await shot('04-house'); }
+if (steps.includes('house')) { await ev(() => window.__dw.house(3)); await page.waitForTimeout(2500); await shot('04-house'); }
 if (steps.includes('sunset')) { await setTime(0.76); await page.waitForTimeout(2500); await shot('05-sunset'); }
 if (steps.includes('night')) { await setTime(0.95); await page.waitForTimeout(2500); await shot('06-night'); }
 if (steps.includes('rain')) { await ev(() => { const s = window.__dw.st; s.weather = { type: 'rain', until: s.clock + 1 }; s.clock = Math.floor(s.clock) + 0.45; }); await page.waitForTimeout(9000); await shot('07-rain'); }

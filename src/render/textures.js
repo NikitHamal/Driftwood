@@ -1,17 +1,19 @@
 import * as THREE from '../../vendor/three.module.js';
 import { rng } from '../core/util.js';
 
-function cv(w, h) {
+function cv(w, h, scale = 1) {
   const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return [c, c.getContext('2d')];
+  c.width = Math.round(w * scale);
+  c.height = Math.round(h * scale);
+  const g = c.getContext('2d');
+  g.scale(scale, scale); // drawing code stays in logical units while the bitmap is supersampled
+  return [c, g];
 }
 function tex(c, srgb = true) {
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = 16;
   return t;
 }
 function speckle(g, w, h, r, n, a) {
@@ -25,7 +27,7 @@ export function woodTex(seed = 3) {
   const r = rng(seed),
     W = 128,
     H = 512,
-    [c, g] = cv(W, H);
+    [c, g] = cv(W, H, 3);
   g.fillStyle = '#cdbda4';
   g.fillRect(0, 0, W, H);
   for (let i = 0; i < 14; i++) {
@@ -85,7 +87,7 @@ export function woodTex(seed = 3) {
 export function clapTex(seed = 5) {
   const r = rng(seed),
     S = 512,
-    [c, g] = cv(S, S),
+    [c, g] = cv(S, S, 2),
     n = 9,
     bw = S / n;
   for (let i = 0; i < n; i++) {
@@ -262,4 +264,35 @@ export function glowTex() {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
+}
+
+/** Derives a tangent-space normal map from a colour texture's luminance (Sobel). Used for planks, clapboard, roofs. */
+export function normalMapFrom(srcTex, strength = 2.2, size = 512) {
+  const src = srcTex.image;
+  const [c, g] = cv(size, size);
+  g.drawImage(src, 0, 0, size, size);
+  const d = g.getImageData(0, 0, size, size),
+    o = g.createImageData(size, size);
+  const h = new Float32Array(size * size);
+  for (let i = 0; i < h.length; i++) h[i] = (d.data[i * 4] * 0.3 + d.data[i * 4 + 1] * 0.59 + d.data[i * 4 + 2] * 0.11) / 255;
+  const at = (x, y) => h[((y + size) % size) * size + ((x + size) % size)];
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const dx = at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+      const dy = at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+      let nx = -dx * strength,
+        ny = dy * strength,
+        nz = 1;
+      const l = Math.hypot(nx, ny, nz);
+      nx /= l;
+      ny /= l;
+      nz /= l;
+      const i = (y * size + x) * 4;
+      o.data[i] = (nx * 0.5 + 0.5) * 255;
+      o.data[i + 1] = (ny * 0.5 + 0.5) * 255;
+      o.data[i + 2] = (nz * 0.5 + 0.5) * 255;
+      o.data[i + 3] = 255;
+    }
+  g.putImageData(o, 0, 0);
+  return tex(c, false);
 }

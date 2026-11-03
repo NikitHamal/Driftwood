@@ -1,3 +1,4 @@
+import { houseXp } from './home.js';
 import { audio } from '../render/stage.js';
 import { G } from '../core/store.js';
 import { pl } from './state.js';
@@ -25,7 +26,7 @@ export const SPD = () => 1 + 0.06 * (lvlOf(G.st.xp) - 1);
 export function addXP(n) {
   if (G.st.name === 'Showcase') return;
   const a = lvlOf(G.st.xp);
-  G.st.xp = (G.st.xp || 0) + n;
+  G.st.xp = (G.st.xp || 0) + Math.round(n * houseXp());
   const b = lvlOf(G.st.xp);
   if (b > a && G.mode === 'play') {
     const r = 15 * b;

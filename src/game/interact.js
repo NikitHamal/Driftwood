@@ -1,4 +1,5 @@
 import * as THREE from '../../vendor/three.module.js';
+import { houseActions, sleepBonus } from './home.js';
 import { BAL, BP, DECK } from '../world/models.js';
 import { T } from '../world/raft.js';
 import { DAY } from './constants.js';
@@ -90,8 +91,7 @@ export function gatherActions() {
         PA.play('climb', 1.1);
       },
     });
-    const night = G.st.clock % 1 > 0.8 || G.st.clock % 1 < 0.22;
-    add(-0.55, 0.75, 1.0, night ? { l: 'Sleep until morning', i: 'bed', f: sleep } : { l: 'Sleep — only at night', i: 'bed', off: 1 });
+    houseActions(add);
   }
   out.sort((a, b) => a.d - b.d);
   return out[0] || null;
@@ -109,7 +109,7 @@ export function sleep() {
       add = t > 0.5 ? 1 - t + 0.26 : 0.26 - t;
     simBuildings(add * DAY, false);
     G.st.clock += add;
-    G.st.vit.hp = Math.min(100, G.st.vit.hp + 40);
+    G.st.vit.hp = Math.min(100, G.st.vit.hp + sleepBonus());
     G.st.vit.food = Math.max(5, G.st.vit.food - 15);
     G.st.vit.water = Math.max(5, G.st.vit.water - 18);
     G.lastDay = Math.floor(G.st.clock);

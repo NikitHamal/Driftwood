@@ -22,6 +22,7 @@ import { crabCollectAll } from '../world/crab.js';
 import { isTouch } from '../input/input.js';
 
 export function applyState() {
+  if (raft.house.level !== (G.st.house || 1)) raft.house.setLevel(G.st.house || 1);
   raft.setTiles(G.st.tiles);
   for (const id of [...raft.bmap.keys()]) raft.removeBuilding(id);
   for (const b of G.st.b) raft.addBuilding(b);

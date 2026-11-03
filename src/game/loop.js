@@ -5,6 +5,7 @@ import { DEBRIS, MAT, timeU } from '../world/models.js';
 import { $ } from '../ui/dom.js';
 import {
   adaptScale,
+  applyIndoor,
   applyQuality,
   applySky,
   audio,
@@ -39,14 +40,14 @@ import { updateTime } from '../game/clock.js';
 import { updateShark } from '../world/shark.js';
 import { updateBoat } from '../world/trader.js';
 import { checkQuest } from '../game/quests.js';
-import { updateCamera } from '../input/camera.js';
+import { cam, updateCamera } from '../input/camera.js';
 import { updatePlayer } from '../game/player.js';
 import { updateCat } from '../world/cat.js';
 import { updateAmbient } from '../world/ambient.js';
 import { gatherActions } from '../game/interact.js';
 import { ic, renderBuildbar, updateHUD, updateMarkers } from '../ui/hud.js';
 import { updateCrab } from '../world/crab.js';
-import { isTouch, mouse, pickDebris } from '../input/input.js';
+import { isTouch, mouse, pickDebris, updateControlsHint } from '../input/input.js';
 
 export const autoQ = { slow: 0, lock: settings.quality !== 'auto' };
 G.fpsT = 0;
@@ -157,6 +158,7 @@ export function frame(now) {
   MAT.lamp.emissiveIntensity = 0.4 + nl * 3;
   MAT.glass.emissiveIntensity = nl * 1.6;
   raft.house.update(dt, nl);
+  applyIndoor(cam.indoor);
   for (const b of raft.bmap.values())
     if (b.data.type === 'sprinkler') {
       const P2 = b.obj.parts,
@@ -245,6 +247,7 @@ export function frame(now) {
       G.hudT = 0;
       G.hudDirty = false;
       updateHUD();
+      updateControlsHint();
     }
   }
   G.markT += rdt;

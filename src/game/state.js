@@ -19,6 +19,7 @@ export function freshState(name, mode) {
     nid: 1,
     up: { rod: 0, hook: 0, still: 0, coil: 0, crab: 0, store: 0 },
     quest: 0,
+    house: 1,
     stats: { crab: 0, debris: 0, fish: 0, ate: 0, drank: 0, planted: 0, harvest: 0, sold: 0, earned: 0, built: {}, tiles: 0, sharks: 0 },
     player: { x: 0, z: 2.5, l: 0 },
     xp: 0,

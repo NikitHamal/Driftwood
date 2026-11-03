@@ -1,3 +1,4 @@
+import { houseDrain } from './home.js';
 import { clamp } from '../core/util.js';
 import { audio, env, raft } from '../render/stage.js';
 import { PA } from '../world/entities.js';
@@ -11,7 +12,7 @@ import { closeModal, openModal } from '../ui/modals.js';
 G.warned = {};
 export function updateSurvival(dt) {
   const v = G.st.vit,
-    k = G.st.mode === 'cozy' ? 0.5 : 1,
+    k = (G.st.mode === 'cozy' ? 0.5 : 1) * houseDrain(),
     heat = env.sunUp > 0.3 && env.rainK < 0.3 ? 1.15 : 1;
   v.food = clamp(v.food - dt * 0.24 * k, 0, 100);
   v.water = clamp(v.water - dt * 0.32 * k * heat, 0, 100);

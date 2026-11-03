@@ -245,3 +245,20 @@ export function placeSun(ld, cx, cz, size) {
     c.updateProjectionMatrix();
   }
 }
+
+let _indoorK = -1;
+/** Dims image-based light inside the house (the roof blocks the sky) by scaling every material's env intensity. */
+export function applyIndoor(k) {
+  if (Math.abs(k - _indoorK) < 0.015) return;
+  _indoorK = k;
+  env.indoor = k;
+  scene.traverse((o) => {
+    const m = o.material;
+    if (!m || o.isSprite || o.isPoints || o.isLine) return;
+    for (const mm of [].concat(m)) {
+      if (mm.envMapIntensity === undefined) continue;
+      if (mm.userData.envBase === undefined) mm.userData.envBase = mm.envMapIntensity;
+      mm.envMapIntensity = mm.userData.envBase * (1 - 0.9 * k);
+    }
+  });
+}

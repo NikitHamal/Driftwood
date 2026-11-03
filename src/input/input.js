@@ -309,3 +309,18 @@ $('#mainMenu').addEventListener('click', (e) => {
 $('#mainMenu').addEventListener('pointerover', (e) => {
   if (e.target.closest('.mbtn')) audio.play('hover');
 });
+
+/** Context-sensitive controls hint + crosshair visibility. */
+export function updateControlsHint() {
+  const fp = isFP(),
+    locked = isLocked();
+  $('#cross').hidden = !(fp && locked);
+  const k = (t) => `<b>${t}</b>`;
+  $('#hint').innerHTML = isTouch
+    ? ''
+    : fp
+      ? locked
+        ? `${k('WASD')} move · ${k('Mouse')} look · ${k('Scroll')} zoom · ${k('Z')} spyglass · ${k('E')} interact · ${k('C')} camera · ${k('Esc')} menu`
+        : `${k('Click')} to capture the mouse and look around`
+      : `${k('WASD')} move · ${k('Drag')} look · ${k('Scroll')} dolly · ${k('Z')} zoom · ${k('E')} interact · ${k('C')} camera · ${k('Tab')} bag`;
+}

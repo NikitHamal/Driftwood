@@ -5,12 +5,14 @@ import { applyQuality, audio, qLevel, saveSettings, settings } from '../render/s
 import { BUY, NAMES, QUESTS, SELL, UPG } from '../game/data.js';
 import { freshState, pl } from '../game/state.js';
 import { G } from '../core/store.js';
-import { give } from '../game/economy.js';
+import { give, has } from '../game/economy.js';
 import { keys } from '../input/controls.js';
 import { banner, ic, pickup } from './hud.js';
 import { hasSave, saveGame, startGame, toTitle } from '../game/session.js';
 import { crab } from '../world/crab.js';
 import { autoQ } from '../game/loop.js';
+import { houseLevel, upgradeHouse } from '../game/home.js';
+import { HOUSE_LEVELS } from '../world/house.js';
 
 export function openModal(html, { wide = false, closable = true, onClose = null, shop = false } = {}) {
   closeModal(true);
@@ -281,4 +283,34 @@ export function openNewWorld() {
     audio.play('quest');
     startGame(freshState(n, md), true);
   };
+}
+
+export function openHouse() {
+  const L = houseLevel(),
+    cur = HOUSE_LEVELS[L - 1],
+    next = HOUSE_LEVELS[L];
+  const costs = next
+    ? Object.entries(next.cost)
+        .map(
+          ([k, v]) =>
+            `<span class="${(G.st.inv[k] | 0) >= v ? '' : 'lack'}"><i style="color:${ITEM[k].color}">${ic(ITEM[k].icon)}</i>${v} ${ITEM[k].name}</span>`,
+        )
+        .join('')
+    : '';
+  const steps = HOUSE_LEVELS.map(
+    (h, i) => `<div class="hl ${i < L ? 'done' : i === L ? 'next' : ''}"><b>${i + 1}</b><span>${h.name}</span></div>`,
+  ).join('<i class="hl-sep"></i>');
+  const m = openModal(
+    head('Blueprint desk', `Level ${L} · ${cur.name}`) +
+      `<div class="house-steps">${steps}</div><p class="sub">${cur.desc}</p><p class="perk"><i>${ic('star')}</i>${cur.perk}</p>` +
+      (next
+        ? `<div class="house-next"><h3>Next: ${next.name}</h3><p class="sub">${next.desc}</p><p class="perk"><i>${ic('star')}</i>${next.perk}</p><div class="cost-row">${costs}</div></div>
+           <div class="btns"><button class="btn" data-close>Later</button><button class="btn pri" id="upg" ${has(next.cost) ? '' : 'disabled'}>Upgrade home</button></div>`
+        : `<div class="btns"><button class="btn pri" data-close>Lovely</button></div>`),
+  );
+  const b = m.querySelector('#upg');
+  if (b)
+    b.onclick = () => {
+      if (upgradeHouse()) openHouse();
+    };
 }

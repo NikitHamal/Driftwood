@@ -1,6 +1,6 @@
 import * as THREE from '../../vendor/three.module.js';
+import { clapTex, glowTex, leafTex, netTex, normalMapFrom, soilTex, woodTex } from '../render/textures.js';
 import { box, cyl, M, mesh, rng, sph, vertexAO } from '../core/util.js';
-import { clapTex, glowTex, leafTex, netTex, soilTex, woodTex } from '../render/textures.js';
 
 export const TEX = {};
 export const MAT = {};
@@ -11,21 +11,27 @@ export function initMaterials() {
   TEX.leaf = leafTex();
   TEX.soil = soilTex();
   TEX.net = netTex();
+  TEX.woodN = normalMapFrom(TEX.wood, 2.6, 1024);
+  TEX.clapN = normalMapFrom(TEX.clap, 3.2, 1024);
+  const NS = new THREE.Vector2(1, 1);
   TEX.glow = glowTex();
-  MAT.plank = new THREE.MeshStandardMaterial({ map: TEX.wood, bumpMap: TEX.wood, bumpScale: 1.2, roughness: 0.9, color: 0xffffff });
-  MAT.darkWood = new THREE.MeshStandardMaterial({ map: TEX.wood, roughness: 0.9, color: '#6e5a45' });
-  MAT.stilt = new THREE.MeshStandardMaterial({ map: TEX.wood, roughness: 0.9, color: '#4f5a50' });
-  MAT.wall = new THREE.MeshStandardMaterial({ map: TEX.clap, bumpMap: TEX.clap, bumpScale: 0.8, roughness: 0.8 });
+  MAT.plank = new THREE.MeshStandardMaterial({ map: TEX.wood, normalMap: TEX.woodN, normalScale: NS, roughness: 0.88, color: 0xffffff });
+  MAT.darkWood = new THREE.MeshStandardMaterial({ map: TEX.wood, normalMap: TEX.woodN, normalScale: NS, roughness: 0.9, color: '#6e5a45' });
+  MAT.stilt = new THREE.MeshStandardMaterial({ map: TEX.wood, normalMap: TEX.woodN, normalScale: NS, roughness: 0.9, color: '#4f5a50' });
+  MAT.wall = new THREE.MeshStandardMaterial({ map: TEX.clap, normalMap: TEX.clapN, normalScale: NS, roughness: 0.72 });
   MAT.trim = M('#1d6a86', 0.7);
   MAT.frame = M('#f0e4c6', 0.7);
-  MAT.roof = new THREE.MeshStandardMaterial({ map: TEX.wood, roughness: 0.95, color: '#5a4a3c' });
+  MAT.roof = new THREE.MeshStandardMaterial({ map: TEX.wood, normalMap: TEX.woodN, normalScale: NS, roughness: 0.95, color: '#5a4a3c' });
   MAT.glass = new THREE.MeshStandardMaterial({
-    color: '#2b4a55',
-    roughness: 0.15,
-    metalness: 0.2,
+    color: '#3a5a66',
+    roughness: 0.05,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.5,
     emissive: new THREE.Color('#ffb860'),
     emissiveIntensity: 0,
   });
+  MAT.panel = new THREE.MeshStandardMaterial({ map: TEX.wood, normalMap: TEX.woodN, normalScale: NS, roughness: 0.8, color: '#d8c4a0' });
   MAT.soil = new THREE.MeshStandardMaterial({ map: TEX.soil, roughness: 1 });
   MAT.terracotta = M('#c76b40', 0.85);
   MAT.rope = M('#cdb88a', 0.95);
@@ -292,7 +298,7 @@ export function rope(a, b, sag = 0.3, r = 0.012) {
 // ---------------- house ----------------
 export const DECK = 0.42,
   BAL = 2.6;
-export function makeHouse() {
+export function makeHouse(opts = {}) {
   const g = new THREE.Group();
   const H = g;
   // stilts
@@ -341,30 +347,9 @@ export function makeHouse() {
     cz1 = 0.35,
     cd = cz1 - cz0,
     cy = BAL + 0.035;
-  const wall = box(cw, ch, cd, MAT.wall, 0, cy + ch / 2, (cz0 + cz1) / 2, H);
-  // uv repeat scale for walls
-  const uv = wall.geometry.attributes.uv;
-  for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * 1.6);
-  for (const x of [-1, 1]) for (const z of [cz0, cz1]) box(0.08, ch, 0.08, MAT.trim, (x * cw) / 2, cy + ch / 2, z, H);
-  // window
+  if (opts.cabin) opts.cabin(H, { cw, ch, cz0, cz1, cy });
   const wx = 0.42,
     wy = cy + 1.1;
-  box(0.62, 0.62, 0.04, MAT.glass, wx, wy, cz1 + 0.01, H);
-  box(0.72, 0.07, 0.07, MAT.frame, wx, wy + 0.33, cz1 + 0.03, H);
-  box(0.72, 0.07, 0.07, MAT.frame, wx, wy - 0.33, cz1 + 0.03, H);
-  box(0.07, 0.7, 0.07, MAT.frame, wx - 0.33, wy, cz1 + 0.03, H);
-  box(0.07, 0.7, 0.07, MAT.frame, wx + 0.33, wy, cz1 + 0.03, H);
-  box(0.04, 0.62, 0.05, MAT.frame, wx, wy, cz1 + 0.03, H);
-  box(0.62, 0.04, 0.05, MAT.frame, wx, wy, cz1 + 0.03, H);
-  box(0.8, 0.06, 0.16, MAT.frame, wx, wy - 0.38, cz1 + 0.07, H);
-  // side window
-  box(0.04, 0.5, 0.5, MAT.glass, cw / 2 + 0.01, wy, -0.5, H);
-  box(0.06, 0.06, 0.6, MAT.frame, cw / 2 + 0.03, wy + 0.28, -0.5, H);
-  box(0.06, 0.06, 0.6, MAT.frame, cw / 2 + 0.03, wy - 0.28, -0.5, H);
-  // door
-  box(0.62, 1.45, 0.05, MAT.trim, -0.55, cy + 0.73, cz1 + 0.02, H);
-  box(0.7, 0.06, 0.07, MAT.frame, -0.55, cy + 1.48, cz1 + 0.03, H);
-  sph(0.03, MAT.metal, -0.32, cy + 0.75, cz1 + 0.06, H, 8, 6);
   // roof
   const ry = cy + ch;
   box(2.7, 0.14, 2.25, MAT.roof, 0, ry + 0.07, (cz0 + cz1) / 2, H);
@@ -407,7 +392,7 @@ export function makeHouse() {
   bench.rotation.y = -Math.PI / 2;
   H.add(bench);
   const ring = makeLifeRing();
-  ring.position.set(-1.12, cy + 1.2, -0.4);
+  ring.position.set(-1.2, cy + 1.2, -0.4);
   ring.rotation.y = Math.PI / 2;
   H.add(ring);
   const lampW = makeLantern();
@@ -618,18 +603,6 @@ function decorate(H, { ry, cy, ch, cz0, cz1, cw, px, pz, wy }) {
   bulbs(H, new THREE.Vector3(-1.32, ry - 0.02, cz1 + 0.3), new THREE.Vector3(1.32, ry - 0.02, cz1 + 0.3), 0.18, 10);
   bunting(H, new THREE.Vector3(-0.1, ry - 0.12, cz1 + 0.06), new THREE.Vector3(1.05, ry - 0.12, cz1 + 0.06), 0.1, 8);
   bulbs(H, new THREE.Vector3(1.48, BAL + 0.6, 1.45), new THREE.Vector3(1.48, BAL + 0.6, -1.45), 0.12, 8);
-  // cabin details
-  gridWindow(H, -cw / 2 - 0.02, wy, -0.5, 0.8, 0.55, -Math.PI / 2);
-  box(0.24, 0.24, 0.02, MAT.glass, -0.55, cy + 1.15, cz1 + 0.05, H);
-  for (let i = 0; i < 3; i++) box(0.012, 1.3, 0.012, DM('#16566e', 0.8), -0.7 + i * 0.15, cy + 0.68, cz1 + 0.05, H);
-  box(0.24, 0.12, 0.02, DM('#7c8a90', 0.5, { metalness: 0.4 }), wx2(), cy + 0.62, cz1 + 0.03, H);
-  for (let i = 0; i < 6; i++) box(0.012, ch, 0.012, DM('#1b5f7a', 0.85), -1.02 + i * 0.4 + 0.2, cy + ch / 2, cz1 + 0.012, H);
-  const broom = cyl(0.012, 0.012, 1.2, DM('#b98a4e', 0.8), -0.98, BAL + 0.62, cz1 + 0.22, H, 5);
-  broom.rotation.z = -0.22;
-  const bh = mesh(new THREE.ConeGeometry(0.08, 0.2, 8), DM('#d9b65a', 0.95), -0.85, BAL + 0.08, cz1 + 0.22, H);
-  box(0.5, 0.015, 0.32, DM('#a3713f', 0.95), -0.55, BAL + 0.045, cz1 + 0.25, H);
-  const clock = cyl(0.06, 0.06, 0.02, MAT.white, -0.93, cy + 0.9, cz1 + 0.05, H, 14);
-  clock.rotation.x = Math.PI / 2;
   // balcony life
   [
     [-1.3, 0.25, 1, 0.85],
