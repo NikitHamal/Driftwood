@@ -1,0 +1,7 @@
+node_modules/
+dist/game.js
+.playwright/
+test-results/
+artifacts/
+*.log
+.DS_Store
