@@ -56,4 +56,10 @@ The credential line is intentionally the only redaction. It must never be restor
 
 - Baseline `./build.sh`: passed after correcting executable permission; generated `dist/Driftwood.html` (~683 KiB) and intermediate `dist/game.js` (~661 KiB).
 - Playwright Chromium executable resolved to `/home/user/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome`.
-- Further visual, interaction and fresh-clone results must be appended with their actual outcomes.
+- Initial browser installs failed for real environment reasons: missing Chromium, then missing `libnspr4.so`. `npx playwright install chromium` and `npx playwright install-deps chromium` resolved them.
+- Early WebGL boot reached title and gameplay. The only errors were two `/favicon.ico` 404s; an inline favicon removed the request.
+- Screenshot inspection caught that root `index.html` lacked a stylesheet link. Added `style.css` for source serving and stripping logic for standalone builds.
+- Full input/visual test: pointer lock PASS, mouse-look PASS, wheel zoom 1.402× PASS, upgrade purchase PASS, zero JS/shader errors. Fixed-duration W assertions initially failed because SwiftShader frames are slow and game delta is capped; this was a test-timing issue, not collision failure.
+- Fast functional run (`DW_FAST=1 DW_SHOTS=0 node scripts/verify.cjs`): PASS. With W physically held, player crossed the real doorway from z=0.9 to z=0.24; doorOpen=0.835, walkable interior=true, house level became 1. Zero console errors and page exceptions.
+- Screenshot inspection: title/menu layout, PBR wood grain, first-person HUD/tool, hinged door, and upgrade modal render correctly. Some full-quality screenshots can exceed 30 s in SwiftShader; visual test timeout is now 60 s and functional mode can skip captures.
+- Further final visual, standalone and fresh-clone results must be appended with their actual outcomes.

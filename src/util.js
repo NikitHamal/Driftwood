@@ -22,10 +22,12 @@ export function mesh(geo,mat,x=0,y=0,z=0,parent=null,shadow=true){
   if(shadow){m.castShadow=true;m.receiveShadow=true;}
   if(parent)parent.add(m);return m;
 }
-export const box=(w,h,d,mat,x,y,z,p)=>mesh(new THREE.BoxGeometry(w,h,d),mat,x,y,z,p);
-export const cyl=(rt,rb,h,mat,x,y,z,p,seg=14)=>mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat,x,y,z,p);
-export const sph=(r,mat,x,y,z,p,ws=16,hs=12)=>mesh(new THREE.SphereGeometry(r,ws,hs),mat,x,y,z,p);
-export const cap=(r,l,mat,x,y,z,p)=>mesh(new THREE.CapsuleGeometry(r,l,6,12),mat,x,y,z,p);
+const geoCache=new Map();
+function cached(key,make){let g=geoCache.get(key);if(!g){g=make();geoCache.set(key,g)}return g}
+export const box=(w,h,d,mat,x,y,z,p)=>mesh(cached(`b:${w}:${h}:${d}`,()=>new THREE.BoxGeometry(w,h,d)),mat,x,y,z,p);
+export const cyl=(rt,rb,h,mat,x,y,z,p,seg=14)=>mesh(cached(`c:${rt}:${rb}:${h}:${seg}`,()=>new THREE.CylinderGeometry(rt,rb,h,seg)),mat,x,y,z,p);
+export const sph=(r,mat,x,y,z,p,ws=16,hs=12)=>mesh(cached(`s:${r}:${ws}:${hs}`,()=>new THREE.SphereGeometry(r,ws,hs)),mat,x,y,z,p);
+export const cap=(r,l,mat,x,y,z,p)=>mesh(cached(`a:${r}:${l}`,()=>new THREE.CapsuleGeometry(r,l,6,12)),mat,x,y,z,p);
 // darken geometry towards bottom with vertex colors (fake AO)
 export function vertexAO(geo,minY,maxY,dark=0.55,base=[1,1,1]){
   const p=geo.attributes.position,c=new Float32Array(p.count*3);

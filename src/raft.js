@@ -1,5 +1,6 @@
 import * as THREE from '../three.module.js';
-import { MAT, makeHouse, makeStation, makeCrop, BP, DECK, BAL } from './models.js';
+import { MAT, makeStation, makeCrop, BP, DECK, BAL } from './models.js';
+import { makeHouse } from './house.js';
 import { rng, box } from './util.js';
 export const T=2.4;
 const DIRS=[[0,1],[1,0],[0,-1],[-1,0]];
@@ -53,7 +54,15 @@ export class Raft{
   }
   // collision
   walkable(x,z,level=0,rad=0.28){
-    if(level===1){return x>-1.32&&x<1.32&&z>0.55&&z<1.3}
+    if(level===1){
+      const r=Math.min(rad,.2);if(Math.abs(x)>1.34-r||z>1.34-r||z< -1.25+r)return false;
+      // The front wall is solid except for the real door opening.
+      if(Math.abs(z-.35)<r+.055&&Math.abs(x+.55)>.31-r)return false;
+      if(z<.35){if(Math.abs(x)>1.0-r)return false;
+        if(Math.abs(x-.57)<.41+r&&Math.abs(z+.7)<.61+r)return false;
+        if(Math.abs(x+.55)<.33+r&&Math.abs(z+.82)<.24+r)return false;}
+      return true;
+    }
     const i=Math.round(x/T),j=Math.round(z/T);if(!this.has(i,j))return false;
     const lx=x-i*T,lz=z-j*T,e=T/2-rad;
     if(lx>e&&!this.has(i+1,j))return false;if(lx<-e&&!this.has(i-1,j))return false;if(lz>e&&!this.has(i,j+1))return false;if(lz<-e&&!this.has(i,j-1))return false;

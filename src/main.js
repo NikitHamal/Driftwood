@@ -11,6 +11,8 @@ import { ICON, ITEM } from './icons.js';
 import { Audio } from './audio.js';
 import { sailTex } from './textures.js';
 import { PixelPass } from './pixel.js';
+import { createEnvironment } from './pbr.js';
+import { ViewModel } from './viewmodel.js';
 const $=s=>document.querySelector(s),DAY=480,SAVE='driftwood.save.v2',SETK='driftwood.settings.v2';
 const setLoad=(p,t)=>{$('#loadFill').style.width=p+'%';if(t)$('#loadTip').textContent=t};
 // ================= renderer =================
@@ -19,12 +21,13 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'h
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
 const scene=new THREE.Scene();scene.fog=new THREE.Fog(0xbfe9f0,140,1500);
-const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,0.1,5000);camera.layers.enable(1);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,0.1,5000);camera.layers.enable(1);scene.add(camera);
 const pix=new PixelPass(renderer,camera);
 const hemi=new THREE.HemisphereLight(0xc4e8ff,0x2c8e92,1.1);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffffff,3);sun.castShadow=true;sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.035;sun.shadow.camera.near=1;sun.shadow.camera.far=90;scene.add(sun,sun.target);
 setLoad(15,'Carving the driftwood…');
 initMaterials();
+const environment=createEnvironment(renderer,scene),viewModel=new ViewModel(camera);
 const audio=new Audio();
 const sky=new Sky(scene),ocean=new Ocean(scene),parts=new Particles(scene),rain=new Rain(scene);
 const raft=new Raft(scene);ocean.sizeFn=()=>pix.on?new THREE.Vector2(pix.w*2,pix.h*2):renderer.getDrawingBufferSize(new THREE.Vector2());
@@ -62,7 +65,7 @@ let qLevel='high';
 function applyQuality(name){qLevel=name;const q=QUAL[name];renderer.setPixelRatio(Math.min(devicePixelRatio,q.pr));renderer.setSize(innerWidth,innerHeight,false);
   const was=renderer.shadowMap.enabled;renderer.shadowMap.enabled=q.sh>0;sun.castShadow=q.sh>0;if(q.sh){sun.shadow.mapSize.set(q.sh,q.sh);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
   if(was!==renderer.shadowMap.enabled)scene.traverse(o=>{if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true)}});
-  pix.px=+settings.pxMode||1;pix.setSize();ocean.setReflection(renderer,q.refl);parts.u.uScale.value=pix.sceneHeight()/(2*Math.tan(camera.fov*Math.PI/360));}
+  pix.px=+settings.pxMode||1;pix.u.uAO.value=q.sh>=1024?1:0;pix.u.uBloom.value=name==='low'?0:1;pix.setSize();ocean.setReflection(renderer,q.refl);parts.u.uScale.value=pix.sceneHeight()/(2*Math.tan(camera.fov*Math.PI/360));}
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);pix.setSize();ocean.resize(renderer);parts.u.uScale.value=pix.sceneHeight()/(2*Math.tan(camera.fov*Math.PI/360))}
 addEventListener('resize',resize);
 applyQuality(settings.quality==='auto'?'high':settings.quality);
@@ -72,8 +75,8 @@ const KF=[
  [0.21,'#0e2444','#3a4f78','#556890','#ffb07a',0.0,'#819bb7','#425c6d',1.05,'#164a5e','#0b3446',0.75,0.7,0.85],
  [0.255,'#4a86c4','#f6c099','#ffd8b0','#ffb070',1.4,'#a9c0dc','#3a6a70',0.85,'#2a8ca2','#1a6c86',1.0,0.05,0.85],
  [0.32,'#1a98d6','#a6e0ef','#cdeef3','#fff1d6',2.7,'#c0e6ff','#2e8a8e',1.1,'#1a9cbc','#0a6c92',1.0,0,1.0],
- [0.5,'#1490d2','#9cdcea','#c6ecf2','#ffffff',3.0,'#c4e8ff','#2c8e92',1.15,'#1b9fbf','#0a6e94',1.0,0,1.0],
- [0.68,'#1a8ecc','#a9dceb','#cdebf0','#fff0d8',2.6,'#bfe0f4','#2e8a8e',1.05,'#1a98b8','#0a6a8f',1.0,0,1.0],
+ [0.5,'#1490d2','#9cdcea','#c6ecf2','#ffffff',3.0,'#c4e8ff','#2c8e92',1.15,'#176f7c','#083f55',1.0,0,1.0],
+ [0.68,'#1a8ecc','#a9dceb','#cdebf0','#fff0d8',2.6,'#bfe0f4','#2e8a8e',1.05,'#1b6c78','#0a4255',1.0,0,1.0],
  [0.755,'#3b6fb0','#f2aa7a','#ffc89c','#ff9a5a',1.5,'#c9a8b8','#3a5a68',0.8,'#2a8ea0','#186a82',1.0,0.05,0.9],
  [0.80,'#1c2c58','#a06070','#c07a78','#ff6a40',0.25,'#6a6a90','#1a3a4a',0.55,'#1a5a70','#0e4458',0.8,0.4,0.7],
  [0.86,'#06142a','#15304e','#1d3b5a','#9db4ff',0.0,'#7898bb','#3e596d',1.15,'#0c3c50','#072a3c',0.65,1,0.85],
@@ -110,7 +113,11 @@ const BUY=[{id:'seedPotato',n:1,p:4},{id:'seedMelon',n:1,p:14},{id:'wood',n:5,p:
 const UPG=[{id:'rod',lv:1,name:'Sturdy Rod',desc:'Wider catch zone and quicker bites.',p:60},{id:'rod',lv:2,name:'Master Rod',desc:'Rare fish bite far more often.',p:180},
  {id:'hook',lv:1,name:'Long Rope',desc:'Hook range 10 m → 14 m.',p:50},{id:'hook',lv:2,name:'Grappling Hook',desc:'Hook range 14 m → 19 m.',p:150},
  {id:'crab',lv:1,name:'Hermit Crab Helper',desc:'Pip the crab collects ready stations for you, even while you are away.',p:200},{id:'crab',lv:2,name:'Crab Crew',desc:'Pip works three times as fast and never rests.',p:450},{id:'store',lv:1,name:'Storage Crates',desc:'Traps, nets, stills, smokers and pearl beds hold twice as much.',p:140},
- {id:'still',lv:1,name:'Solar Still Blueprint',desc:'Unlocks the Solar Still to build.',p:120},{id:'coil',lv:1,name:'Copper Coil',desc:'Purifiers make 3 water per boil.',p:90}];
+  {id:'still',lv:1,name:'Solar Still Blueprint',desc:'Unlocks the Solar Still to build.',p:120},{id:'coil',lv:1,name:'Copper Coil',desc:'Purifiers make 3 water per boil.',p:90}];
+const HOUSE_UP=[
+ {name:'Weatherproof Cabin',desc:'Copper brackets, storm shutters and gutters protect your home.',perk:'+5% station speed · 8% slower hunger and thirst',cost:{wood:18,scrap:6,plastic:8}},
+ {name:'Solar Workshop',desc:'A roof solar array and a fitted craftsman’s workbench.',perk:'+12% total station speed · 16% slower hunger and thirst',cost:{wood:28,scrap:14,plastic:16,fiber:10}},
+ {name:'Captain’s Retreat',desc:'Navigation instruments, brass fittings and a master-crafted interior.',perk:'+20% total station speed · 24% slower vitals · 12 h offline progress',cost:{wood:42,scrap:24,plastic:22,fiber:18}}];
 const QUESTS=[
  {t:'Hook floating debris',d:'Select the Hook (1), then click debris drifting past the raft.',k:'debris',n:5,r:{coins:10,wood:4}},
  {t:'Catch a fish',d:'Select the Rod (2) and click the water to cast. Click when the bobber dips!',k:'fish',n:1,r:{coins:10}},
@@ -137,9 +144,9 @@ const QUESTS=[
 const NAMES=['Seabreeze','Saltwind','Lantern Bay','Driftwood Haven','Coral Rest','Gullsong','Bluewater','Tidewatch'];
 const INV0={wood:8,plastic:4,fiber:2,scrap:1,rawFish:0,cookedFish:1,water:1,potato:0,melon:0,seedPotato:3,seedMelon:0,coins:15};
 function freshState(name,mode){const t=[];for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)t.push([i,j]);
-  return{v:2,name,mode,created:Date.now(),saved:Date.now(),clock:1.3,weather:{type:'clear',until:1.55},vit:{hp:100,food:90,water:85},inv:{...INV0},tiles:t,b:[],nid:1,up:{rod:0,hook:0,still:0,coil:0,crab:0,store:0},quest:0,
+  return{v:2,name,mode,created:Date.now(),saved:Date.now(),clock:1.3,weather:{type:'clear',until:1.55},vit:{hp:100,food:90,water:85},inv:{...INV0},tiles:t,b:[],nid:1,houseLv:0,up:{rod:0,hook:0,still:0,coil:0,crab:0,store:0},quest:0,
     stats:{crab:0,debris:0,fish:0,ate:0,drank:0,planted:0,harvest:0,sold:0,earned:0,built:{},tiles:0,sharks:0},player:{x:0,z:2.5,l:0},xp:0,sharkNext:200,seedSel:'potato',play:0}}
-function showcase(){const s=freshState('Showcase','cozy');s.tiles.push([-1,2],[0,2],[1,2],[2,0],[2,1]);
+function showcase(){const s=freshState('Showcase','cozy');s.houseLv=3;s.tiles.push([-1,2],[0,2],[1,2],[2,0],[2,1]);
   s.b=[{id:1,type:'planter',tile:[-1,1],s:{crop:'potato',grow:0.8}},{id:2,type:'grill',tile:[1,1],s:{}},{id:3,type:'rain',tile:[1,-1],s:{n:2}},{id:4,type:'net',tile:[0,2],s:{items:[]}},{id:5,type:'planter',tile:[2,0],s:{crop:'melon',grow:1}},{id:6,type:'lamp',tile:[-1,-1],s:{}}];return s}
 let st=showcase(),mode='title',curModal=null;
 const pl={x:0,z:2.5,l:0,face:0,speed:0,lock:0,climb:null,tool:'hook'};
@@ -149,7 +156,7 @@ const has=(cost)=>Object.entries(cost).every(([k,v])=>(st.inv[k]||0)>=v);
 const pay=(cost)=>{for(const k in cost)st.inv[k]-=cost[k]};
 function give(items,silent){let xp=0;for(const k in items){if(!items[k])continue;st.inv[k]=(st.inv[k]||0)+items[k];if(k!=='coins'&&items[k]>0)xp+=items[k];if(!silent)pickup(k,items[k])}if(xp)addXP(xp);hudDirty=true}
 const lvlOf=x=>Math.floor(Math.sqrt((x||0)/40))+1,xpFor=l=>(l-1)*(l-1)*40;
-const SPD=()=>1+0.06*(lvlOf(st.xp)-1);
+const SPD=()=>1+0.06*(lvlOf(st.xp)-1)+[0,.05,.12,.2][st.houseLv||0];
 function addXP(n){if(st.name==='Showcase')return;const a=lvlOf(st.xp);st.xp=(st.xp||0)+n;const b=lvlOf(st.xp);if(b>a&&mode==='play'){const r=15*b;st.inv.coins+=r;banner(`Renown level ${b}!`,`+${r} coins · stations now ${Math.round((SPD()-1)*100)}% faster`,'gold');audio.play('quest')}}
 const hookRange=()=>[10,14,19][st.up.hook];
 function rollLoot(type){const d=DEBRIS[type];if(typeof d.loot==='object')return{...d.loot};const o={};
@@ -158,9 +165,10 @@ function rollLoot(type){const d=DEBRIS[type];if(typeof d.loot==='object')return{
 function rollType(){let tot=0;for(const k in DEBRIS)tot+=DEBRIS[k].w;let r=Math.random()*tot;for(const k in DEBRIS){r-=DEBRIS[k].w;if(r<=0)return k}return'plank'}
 const worldPos=(x,y,z)=>raft.group.localToWorld(new THREE.Vector3(x,y,z));
 const playerWorld=()=>P.root.getWorldPosition(new THREE.Vector3());
+function equippedTip(kind='rod'){if(mode==='play'&&CAMS[settings.cam|0]?.fp)return camera.localToWorld(new THREE.Vector3(kind==='rod'?.28:.32,kind==='rod'?-.1:-.25,kind==='rod'?-.78:-.55));return (kind==='rod'?P.rodTip:P.lHand).getWorldPosition(new THREE.Vector3())}
 // ================= raft state application =================
 function applyState(){
-  raft.setTiles(st.tiles);for(const id of[...raft.bmap.keys()])raft.removeBuilding(id);for(const b of st.b)raft.addBuilding(b);
+  raft.setTiles(st.tiles);raft.house.setLevel(st.houseLv||0);for(const id of[...raft.bmap.keys()])raft.removeBuilding(id);for(const b of st.b)raft.addBuilding(b);
   ocean.setFoam(st.tiles,T);raft.health.clear();
   pl.x=st.player.x;pl.z=st.player.z;pl.l=st.player.l||0;if(!raft.walkable(pl.x,pl.z,pl.l)){pl.x=0;pl.z=2.5;pl.l=0;if(!raft.walkable(pl.x,pl.z,0))respawnSpot()}
   pl.lock=0;pl.climb=null;fish.st='none';hk.st='none';cancelBuild();
@@ -248,7 +256,7 @@ function startCast(p){const pw=playerWorld(),d=Math.hypot(p.x-pw.x,p.z-pw.z);if(
 function cancelFish(msg){if(fish.st==='none')return;fish.st='none';bobber.visible=false;fishLine.visible=false;$('#fishbar').hidden=true;PA.hold=null;if(msg)toast(msg)}
 function rollFish(){const w=FISH.map((f,i)=>f.w*(i>=2?1+st.up.rod*0.8:1));let tot=w.reduce((a,b)=>a+b),r=Math.random()*tot;for(let i=0;i<FISH.length;i++){r-=w[i];if(r<=0)return FISH[i]}return FISH[0]}
 function updateFish(dt){if(fish.st==='none'){if(mode==='title'){}return}
-  fish.t+=dt;const tip=P.rodTip.getWorldPosition(new THREE.Vector3());
+  fish.t+=dt;const tip=equippedTip('rod');
   if(fish.st==='cast'){if(fish.t>0.3){if(!fish.sp2){fish.sp2=tip.clone()}const k=clamp((fish.t-0.3)/0.6,0,1);bobber.visible=true;const p=fish.sp2.clone().lerp(new THREE.Vector3(fish.x,0,fish.z),k);p.y+=Math.sin(k*Math.PI)*3*(1-k*0.3);if(k>=1){p.y=waveHeight(fish.x,fish.z);fish.st='wait';fish.t=0;fish.wait=rr(3.5,9)/(1+st.up.rod*0.35);parts.splash(fish.x,fish.z,0.5);audio.play('splash');fish.sp2=null}bobber.position.copy(p)}}
   else if(fish.st==='wait'){bobber.position.set(fish.x,waveHeight(fish.x,fish.z)+Math.sin(fish.t*3)*0.02,fish.z);if(fish.t>fish.wait&&Math.random()<0.6){fish.st='bite';fish.t=0;fish.f=rollFish();parts.splash(fish.x,fish.z,0.7);audio.play('bite');showFishPrompt()}else if(fish.t>fish.wait){fish.wait+=0.8}}
   else if(fish.st==='bite'){bobber.position.set(fish.x,waveHeight(fish.x,fish.z)-0.12+Math.sin(fish.t*30)*0.04,fish.z);if(fish.t>1.3){cancelFish('It got away…');audio.play('fail')}}
@@ -263,8 +271,8 @@ function fishClick(){if(fish.st==='bite'){fish.st='mini';fish.t=0;fish.mk=0;fish
 // ================= hook =================
 const hk={st:'none',d:null,t:0,from:new THREE.Vector3()};
 function throwHook(d){const pw=playerWorld(),dist=Math.hypot(d.x-pw.x,d.z-pw.z);if(dist>hookRange()){toast(`Too far — hook range is ${hookRange()} m`);return}
-  pl.face=Math.atan2(d.x-pw.x,d.z-pw.z);PA.play('throw',0.5);audio.play('cast');hk.st='fly';hk.d=d;hk.t=0;d.st='hooked';pl.lock=0.5;hk.from.copy(P.lHand.getWorldPosition(new THREE.Vector3()))}
-function updateHook(dt){if(hk.st==='none')return;hk.t+=dt;const hand=P.lHand.getWorldPosition(new THREE.Vector3()),d=hk.d;
+  pl.face=Math.atan2(d.x-pw.x,d.z-pw.z);PA.play('throw',0.5);audio.play('cast');hk.st='fly';hk.d=d;hk.t=0;d.st='hooked';pl.lock=0.5;hk.from.copy(equippedTip('hook'))}
+function updateHook(dt){if(hk.st==='none')return;hk.t+=dt;const hand=equippedTip('hook'),d=hk.d;
   if(!d.obj.parent){hk.st='none';hookObj.visible=false;fishLine.visible=fish.st!=='none';return}
   if(hk.st==='fly'){const k=clamp(hk.t/0.4,0,1);const p=hand.clone().lerp(d.obj.position,k);p.y+=Math.sin(k*Math.PI)*2;hookObj.position.copy(p);hookObj.visible=true;if(k>=1){hk.st='pull';audio.play('splash');parts.splash(d.x,d.z,0.6);PA.play('pull',8)}}
   else{const pw=playerWorld(),dx=pw.x-d.x,dz=pw.z-d.z,dist=Math.hypot(dx,dz);const sp=Math.min(6,1.5+hk.t*4);d.x+=dx/dist*sp*dt;d.z+=dz/dist*sp*dt;hookObj.position.copy(d.obj.position);if(Math.random()<0.25)parts.emit({x:d.x,y:0.05,z:d.z,count:2,spread:0.5,vel:[0,0.8,0],vr:0.4,life:0.6,size:[0.1,0.04],color:'#f2fbff'});
@@ -296,7 +304,7 @@ function placeBuild(){if(!ghostCell)return;const[i,j]=ghostCell;
 function dust(p){parts.emit({x:p.x,y:p.y+0.1,z:p.z,count:30,spread:2,vel:[0,1,0],vr:1,life:1,size:[0.25,0.5],color:'#e8dcc4',alpha:0.5,gravity:0.5,drag:2})}
 // ================= survival =================
 let warned={};
-function updateSurvival(dt){const v=st.vit,k=st.mode==='cozy'?0.5:1,heat=env.sunUp>0.3&&env.rainK<0.3?1.15:1;
+function updateSurvival(dt){const v=st.vit,k=(st.mode==='cozy'?0.5:1)*(1-[0,.08,.16,.24][st.houseLv||0]),heat=env.sunUp>0.3&&env.rainK<0.3?1.15:1;
   v.food=clamp(v.food-dt*0.24*k,0,100);v.water=clamp(v.water-dt*0.32*k*heat,0,100);
   if(v.food<=0||v.water<=0)v.hp-=dt*((v.food<=0?0.6:0)+(v.water<=0?0.9:0))*k;else if(v.food>45&&v.water>45)v.hp=Math.min(100,v.hp+dt*0.35);
   for(const n of['food','water']){if(v[n]<20&&!warned[n]){warned[n]=1;banner(n==='food'?'You’re starving':'You’re very thirsty',n==='food'?'Eat something soon (5)':'Drink fresh water soon (6)','warn');audio.play('warn')}if(v[n]>35)warned[n]=0}
@@ -347,9 +355,10 @@ function qProg(q){if(q.k.startsWith('b:'))return st.stats.built[q.k.slice(2)]||0
 function checkQuest(){const q=QUESTS[st.quest];if(!q)return;if(qProg(q)>=q.n){give(q.r);st.quest++;banner('Objective complete',q.t,'gold');audio.play('quest');const el=$('#quest');el.classList.remove('done');void el.offsetWidth;el.classList.add('done');hudDirty=true}}
 // ================= player & companions =================
 const keys=new Set();const joy={x:0,y:0};
-const CAMS=[{n:'Follow',d:10,p:0.4,fov:48},{n:'Close',d:4.8,p:0.22,fov:55},{n:'Overview',d:24,p:0.95,fov:38},{n:'First person',fp:1,d:3,p:0.45,fov:72}];
-function setCam(i,quiet){settings.cam=i=((i%CAMS.length)+CAMS.length)%CAMS.length;const c=CAMS[i];cam.tdist=c.d;cam.tpitch=c.p;camera.fov=c.fov;camera.updateProjectionMatrix();parts.u.uScale.value=pix.sceneHeight()/(2*Math.tan(camera.fov*Math.PI/360));saveSettings();if(!quiet)banner('Camera',c.n+' · press C to switch',null,true);const b=$('#btnCam');if(b)b.title='Camera: '+c.n+' (C)'}
-const cam={yaw:0.5,pitch:0.38,dist:10,tx:0,ty:0,tz:0,tyaw:0.5,tpitch:0.38,tdist:10};
+const CAMS=[{n:'Follow',d:10,p:.4,fov:48},{n:'Close',d:4.8,p:.22,fov:55},{n:'Overview',d:24,p:.95,fov:38},{n:'First person',fp:1,d:3,p:0,fov:72}];
+function updateOptics(){const o=$('#optics');if(!o)return;o.innerHTML=`FOCUS <b>${cam.zoom.toFixed(1)}×</b>`;o.classList.toggle('on',cam.zoom>1.04)}
+function setCam(i,quiet){settings.cam=i=((i%CAMS.length)+CAMS.length)%CAMS.length;const c=CAMS[i];if(!c.fp&&document.pointerLockElement)document.exitPointerLock();cam.tdist=c.d;cam.tpitch=c.p;cam.baseFov=c.fov;cam.zoom=1;camera.fov=c.fov;camera.updateProjectionMatrix();parts.u.uScale.value=pix.sceneHeight()/(2*Math.tan(camera.fov*Math.PI/360));updateOptics();saveSettings();if(!quiet)banner('Camera',c.n+(c.fp?' · click to capture mouse':' · press C to switch'),null,true);const b=$('#btnCam');if(b)b.title='Camera: '+c.n+' (C)'}
+const cam={yaw:.5,pitch:.38,dist:10,tx:0,ty:0,tz:0,tyaw:.5,tpitch:.38,tdist:10,baseFov:48,zoom:1,bob:0};
 function updatePlayer(dt){
   let ix=(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+joy.x,iz=(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0)+joy.y;
   const len=Math.hypot(ix,iz);pl.lock=Math.max(0,pl.lock-dt);let speed=0;
@@ -392,7 +401,8 @@ function gatherActions(){const out=[];const add=(x,z,r,a,pri=0)=>{const d=Math.h
     if(boatS.st==='docked'){const lp=raft.group.worldToLocal(new THREE.Vector3(boatS.x,0,boatS.z));add(lp.x,lp.z,5.2,{l:'Trade with Marlo',i:'boat',f:openShop},0.5)}
     if(sh.st==='attack'||sh.st==='approach'){const lp=raft.group.worldToLocal(new THREE.Vector3(sh.x,0,sh.z));add(lp.x,lp.z,4.2,{l:'Fend off the shark!',i:'shark',f:scareShark},3)}
   }else{add(L.x,1.05,0.9,{l:'Climb down',i:'ladder',f:()=>{pl.climb={t:0,y0:BAL+0.035,y1:DECK,z0:L.z-0.33,z1:L.z,l:0};PA.play('climb',1.1)}});
-    const night=(st.clock%1)>0.8||(st.clock%1)<0.22;add(-0.55,0.75,1.0,night?{l:'Sleep until morning',i:'bed',f:sleep}:{l:'Sleep — only at night',i:'bed',off:1})}
+    add(-.55,.9,1.0,{l:`Cabin upgrades · tier ${(st.houseLv||0)+1}`,i:'hammer',f:openHouseUpgrades},-.1);
+    const bd=raft.house.bed,night=(st.clock%1)>0.8||(st.clock%1)<0.22;add(bd.x-.55,bd.z,1.15,night?{l:'Sleep in your bed until morning',i:'bed',f:sleep}:{l:'Your bed — sleep available at night',i:'bed',off:1})}
   out.sort((a,b)=>a.d-b.d);return out[0]||null}
 function interact(){if(!curAct||curAct.off||pl.lock>0)return;audio.play('click');curAct.f();hudDirty=true;if(!['Climb up','Climb down'].includes(curAct.l)&&!PA.action)PA.play('interact',0.6)}
 function sleep(){fadeOut(()=>{const t=st.clock%1,add=(t>0.5?1-t+0.26:0.26-t);simBuildings(add*DAY,false);st.clock+=add;st.vit.hp=Math.min(100,st.vit.hp+40);st.vit.food=Math.max(5,st.vit.food-15);st.vit.water=Math.max(5,st.vit.water-18);lastDay=Math.floor(st.clock);banner(`Day ${lastDay}`,'You feel well rested');saveGame()})}
@@ -446,7 +456,7 @@ function updateMarkers(){const list=[];if(mode==='play'){
     if(m.ready||m.warn||m.lab){pr.style.display='none'}else{pr.style.display='';pv.style.strokeDashoffset=106.8*(1-(m.pf||0))}}
   for(let i=n;i<mkPool.length;i++)mkPool[i].style.display='none'}
 // ================= modals =================
-function openModal(html,{wide=false,closable=true,onClose=null,shop=false}={}){closeModal(true);const back=document.createElement('div');back.className='modal-back';back.innerHTML=`<div class="modal ${wide?'wide':''}">${html}</div>`;$('#modals').appendChild(back);curModal={back,closable,onClose,shop};
+function openModal(html,{wide=false,closable=true,onClose=null,shop=false}={}){if(document.pointerLockElement)document.exitPointerLock();closeModal(true);const back=document.createElement('div');back.className='modal-back';back.innerHTML=`<div class="modal ${wide?'wide':''}">${html}</div>`;$('#modals').appendChild(back);curModal={back,closable,onClose,shop};
   back.addEventListener('pointerdown',e=>{if(e.target===back&&closable)closeModal()});back.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal());keys.clear();return back.firstElementChild}
 function closeModal(silent){if(!curModal)return;const m=curModal;curModal=null;m.back.remove();if(m.onClose&&!silent)m.onClose()}
 const head=(t,s)=>`<div class="mhead"><div><h2>${t}</h2>${s?`<p class="sub">${s}</p>`:''}</div><button class="xbtn" data-close aria-label="Close">${ic('close')}</button></div>`;
@@ -461,12 +471,19 @@ function openSettings(back){const m=openModal(head('Settings','Tune graphics, so
   m.querySelector('#sF').onclick=e=>{settings.fps=!settings.fps;e.target.classList.toggle('on',settings.fps);$('#fps').hidden=!settings.fps;saveSettings()};
   m.querySelectorAll('input[type=range]').forEach(r=>r.oninput=()=>{settings[r.dataset.k]=+r.value;audio.vol={master:settings.master,music:settings.music,sfx:settings.sfx};audio.apply();saveSettings()})}
 function openHowto(back){openModal(head('How to play','Survive, gather, grow and expand your floating home')+`<div class="keys">
-  <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</div><div><kbd>Shift</kbd> Run</div><div><kbd>Drag</kbd> Look around</div><div><kbd>Scroll</kbd> Zoom</div>
+  <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</div><div><kbd>Shift</kbd> Run</div><div><kbd>Drag</kbd> Orbit in third person</div><div><kbd>Click</kbd> Capture mouse in first person</div><div><kbd>Mouse</kbd> Free look in first person</div><div><kbd>Scroll</kbd> Focus zoom in every view</div>
   <div><kbd>E</kbd> Interact</div><div><kbd>Click</kbd> Use tool</div><div><kbd>1</kbd>–<kbd>6</kbd> Hotbar</div><div><kbd>Tab</kbd> Inventory</div><div><kbd>Space</kbd> Reel fish</div><div><kbd>Esc</kbd> Pause</div></div>
   <ul class="tips"><li>Use the <b>Hook</b> to pull in planks, bottles, fronds, barrels and crates.</li><li>Cast your <b>Rod</b>, wait for the bobber to dip, click, then stop the marker inside the green zone.</li><li>Keep <b>Hunger</b> and <b>Thirst</b> up. When either reaches zero, you start losing health.</li><li>Build a <b>Grill</b>, <b>Purifier</b> and <b>Planters</b>. Nets, traps and stills keep working while you’re away.</li><li>Marlo the merchant visits daily from 09:00 to 15:00. Sell goods and buy upgrades.</li><li>In Survival mode, a shark attacks your raft from time to time. Get close and press <b>E</b>, or click it with the Hook.</li></ul>
   <div class="btns"><button class="btn pri" data-close>Got it</button></div>`,{onClose:back})}
 function openPause(){if(mode!=='play')return;const m=openModal(head('Paused',`${st.name} · Day ${Math.floor(st.clock)} · ${st.mode==='cozy'?'Cozy':'Survival'}`)+`<div class="pause-menu"><button class="btn pri" data-a="resume">Resume</button><button class="btn" data-a="inv">Inventory & objectives</button><button class="btn" data-a="settings">Settings</button><button class="btn" data-a="howto">How to play</button><button class="btn" data-a="quit">Save & quit to title</button></div>`);
   m.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{audio.play('click');const a=b.dataset.a;if(a==='resume')closeModal();if(a==='inv')openInventory();if(a==='settings')openSettings(openPause);if(a==='howto')openHowto(openPause);if(a==='quit'){closeModal();saveGame();toTitle()}})}
+function openHouseUpgrades(){
+  const lv=st.houseLv||0,next=HOUSE_UP[lv];
+  const tiers=HOUSE_UP.map((u,i)=>`<div class="house-tier ${i<lv?'owned':i===lv?'next':''}"><span class="tier-no">0${i+1}</span><div><b>${u.name}</b><p>${u.desc}</p><small>${u.perk}</small></div>${i<lv?`<span class="tier-owned">${ic('check')} Built</span>`:''}</div>`).join('');
+  const cost=next?Object.entries(next.cost).map(([k,v])=>`<span class="${(st.inv[k]|0)>=v?'':'lack'}"><i style="color:${ITEM[k].color}">${ic(ITEM[k].icon)}</i>${st.inv[k]|0} / ${v}</span>`).join(''):'';
+  const m=openModal(head('Cabin & living quarters',`Tier ${lv+1} · ${lv?HOUSE_UP[lv-1].name:'Driftwood Cabin'}`)+`<div class="house-tiers">${tiers}</div>${next?`<div class="upgrade-buy"><div><b>Next: ${next.name}</b><div class="upgrade-cost">${cost}</div></div><button class="btn pri" id="buyHouse" ${has(next.cost)?'':'disabled'}>Upgrade</button></div>`:'<p class="maxed">Your cabin is fully upgraded. All passive perks are active.</p>'}<div class="btns"><button class="btn" data-close>Return</button></div>`,{wide:true});
+  const buy=m.querySelector('#buyHouse');if(buy)buy.onclick=()=>{if(!has(next.cost))return;pay(next.cost);st.houseLv=lv+1;raft.house.setLevel(st.houseLv);audio.play('quest');banner(next.name,next.perk,'gold');saveGame();openHouseUpgrades()};
+}
 function openInventory(tab='items'){if(mode!=='play')return;const I=st.inv;
   const items=Object.keys(ITEM).filter(k=>k!=='coins').map(k=>`<div class="it"><i style="color:${ITEM[k].color}">${ic(ITEM[k].icon)}</i><b>${I[k]|0}</b><span>${ITEM[k].name}</span></div>`).join('');
   const quests=QUESTS.map((q,i)=>`<div class="ql ${i<st.quest?'done':i===st.quest?'cur':'lock'}"><div class="ck">${i<st.quest?ic('check'):''}</div><div><div class="qt">${q.t}</div><div class="q-d">${i<=st.quest?q.d:'Locked'}</div></div></div>`).join('');
@@ -492,7 +509,7 @@ function fadeOut(mid){const f=$('#fade');f.classList.add('on');setTimeout(()=>{m
 function migrate(s){const f=freshState(s.name||'World',s.mode||'survival');for(const k in f)if(s[k]===undefined)s[k]=f[k];s.inv={...INV0,...s.inv};for(const k in INV0)if(s.inv[k]==null)s.inv[k]=0;s.stats={...f.stats,...s.stats};s.up={...f.up,...s.up};return s}
 function startGame(state,isNew){fadeOut(()=>{st=migrate(state);mode='play';lastDay=Math.floor(st.clock);warned={};applyState();$('#title').hidden=true;$('#hud').hidden=false;hudDirty=true;cam.tyaw=cam.yaw=0.5;setCam(settings.cam|0,true);pl.tool='hook';PA.hold=null;cancelFish();bobber.visible=false;fishLine.visible=false;
   if(isNew){banner(st.name,'Stranded on an endless sea. Make it home.','gold');saveGame()}
-  else{const away=Math.min(8*3600,(Date.now()-(st.saved||Date.now()))/1000);if(away>60){const before=snap();simBuildings(away,false);const after=snap();if(st.up.crab)crabCollectAll(true);const gained=Object.keys(after).filter(k=>after[k]>before[k]).map(k=>[k,after[k]-before[k]]);
+  else{const away=Math.min((st.houseLv>=3?12:8)*3600,(Date.now()-(st.saved||Date.now()))/1000);if(away>60){const before=snap();simBuildings(away,false);const after=snap();if(st.up.crab)crabCollectAll(true);const gained=Object.keys(after).filter(k=>after[k]>before[k]).map(k=>[k,after[k]-before[k]]);
     if(gained.length)setTimeout(()=>openModal(head('Welcome back!',`You were away for ${fmtDur(away)}. Your raft kept working:`)+`<div class="away-list">${gained.map(([k,v])=>`<div class="it"><i style="color:${ITEM[k].color}">${ic(ITEM[k].icon)}</i><b>+${v}</b><span>${ITEM[k].name} ready</span></div>`).join('')}</div><p class="sub" style="margin-top:14px">Collect it from your stations with E.</p><div class="btns"><button class="btn pri" data-close>Let’s go</button></div>`),700)}
     else banner(`Welcome back`,`${st.name} · Day ${Math.floor(st.clock)}`)}
   if(isTouch){$('#joy').hidden=false;$('#mobUse').hidden=false;$('#hint').hidden=true}})}
@@ -519,7 +536,7 @@ function makeCrabMesh(){const g=new THREE.Group(),sh=new THREE.MeshStandardMater
   g.traverse(m=>{if(m.isMesh)m.castShadow=true});return g}
 crab.obj=makeCrabMesh();raft.group.add(crab.obj);crab.obj.visible=false;
 const fmtDur=s=>s>3600?`${Math.floor(s/3600)} h ${Math.floor(s%3600/60)} min`:`${Math.floor(s/60)} min`;
-function toTitle(){fadeOut(()=>{mode='title';P.root.visible=true;camera.fov=48;camera.updateProjectionMatrix();st=showcase();applyState();$('#hud').hidden=true;$('#title').hidden=false;refreshTitle();cancelFish();PA.hold='rod';pl.x=1.5;pl.z=2.6;pl.face=0.6})}
+function toTitle(){fadeOut(()=>{mode='title';P.root.visible=true;cam.baseFov=48;cam.zoom=1;camera.fov=48;camera.updateProjectionMatrix();st=showcase();applyState();$('#hud').hidden=true;$('#title').hidden=false;refreshTitle();cancelFish();PA.hold='rod';pl.x=1.5;pl.z=2.6;pl.face=0.6})}
 function refreshTitle(){const s=hasSave(),b=$('#btnContinue');b.hidden=!s;if(s){$('#contInfo').textContent=`${s.name} · Day ${Math.floor(s.clock)} · ${s.mode==='cozy'?'Cozy':'Survival'}`;b.classList.add('primary')}}
 function openNewWorld(){const ex=hasSave();let md='survival';const nm=pick(NAMES);
   const m=openModal(head('New World','Choose how your voyage begins')+`<div class="field"><label for="wn">World name</label><input class="input" id="wn" maxlength="24" value="${nm}"></div>
@@ -532,12 +549,18 @@ function openNewWorld(){const ex=hasSave();let md='survival';const nm=pick(NAMES
 const isTouch=matchMedia('(pointer:coarse)').matches;
 const ray=new THREE.Raycaster();const mouse={ndc:new THREE.Vector2(),inside:false,x:0,y:0};let drag=null,hoverD=null;
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('pointerdown',e=>{audio.init();drag={x:e.clientX,y:e.clientY,b:e.button,moved:false,id:e.pointerId};canvas.setPointerCapture(e.pointerId)});
-canvas.addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);mouse.inside=true;
-  if(drag&&drag.id===e.pointerId){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!drag.moved&&Math.hypot(dx,dy)>5)drag.moved=true;if(drag.moved&&mode==='play'){cam.tyaw-=e.movementX*0.006*settings.sens;cam.tpitch=clamp(cam.tpitch+e.movementY*0.005*settings.sens,0.06,1.25)}}});
+const fpMode=()=>!!CAMS[settings.cam|0].fp,pointerLocked=()=>document.pointerLockElement===canvas;
+canvas.addEventListener('pointerdown',e=>{audio.init();if(mode!=='play'||curModal)return;
+  if(fpMode()&&!pointerLocked()){if(e.button===0)canvas.requestPointerLock();return}
+  drag={x:e.clientX,y:e.clientY,b:e.button,moved:false,id:e.pointerId,locked:pointerLocked()};if(!drag.locked)canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.inside=true;
+  if(fpMode()&&pointerLocked()){mouse.ndc.set(0,0);cam.tyaw-=e.movementX*.0022*settings.sens;cam.tpitch=clamp(cam.tpitch+e.movementY*.0022*settings.sens,-1.25,1.25);return}
+  mouse.ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);
+  if(drag&&drag.id===e.pointerId){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!drag.moved&&Math.hypot(dx,dy)>5)drag.moved=true;if(drag.moved&&mode==='play'){cam.tyaw-=e.movementX*.006*settings.sens;cam.tpitch=clamp(cam.tpitch+e.movementY*.005*settings.sens,.06,1.25)}}});
 canvas.addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;if(d.moved||mode!=='play'||curModal)return;if(d.b===2){if(buildOn)cancelBuild();return}if(d.b===0)worldClick()});
-canvas.addEventListener('pointerleave',()=>{mouse.inside=false});
-canvas.addEventListener('wheel',e=>{if(mode==='play'&&!CAMS[settings.cam|0].fp)cam.tdist=clamp(cam.tdist*(1+Math.sign(e.deltaY)*0.1),3.5,26)},{passive:true});
+canvas.addEventListener('pointerleave',()=>{if(!pointerLocked())mouse.inside=false});
+document.addEventListener('pointerlockchange',()=>{const on=pointerLocked();$('#hud').classList.toggle('locked',on);mouse.ndc.set(0,0);mouse.inside=on;drag=null;keys.clear();if(on)canvas.focus()});
+canvas.addEventListener('wheel',e=>{if(mode!=='play'||curModal)return;e.preventDefault();cam.zoom=clamp(cam.zoom*Math.exp(-e.deltaY*.0013),1,3);updateOptics()},{passive:false});
 function pickDebris(){ray.setFromCamera(mouse.ndc,camera);const objs=debris.filter(d=>d.st==='float').map(d=>d.obj);const hits=ray.intersectObjects(objs,true);if(hits.length){let o=hits[0].object;while(o&&!o.userData.ref)o=o.parent;if(o)return o.userData.ref}
   const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),p=new THREE.Vector3();if(!ray.ray.intersectPlane(plane,p))return null;let best=null,bd=1.4;for(const d of debris){if(d.st!=='float')continue;const dd=Math.hypot(d.x-p.x,d.z-p.z);if(dd<bd){bd=dd;best=d}}return best}
 function waterPoint(){ray.setFromCamera(mouse.ndc,camera);const p=new THREE.Vector3();if(!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),p))return null;const l=raft.group.worldToLocal(p.clone());const i=Math.round(l.x/T),j=Math.round(l.z/T);if(raft.has(i,j)&&Math.abs(l.x-i*T)<T/2+0.2&&Math.abs(l.z-j*T)<T/2+0.2)return null;return p}
@@ -565,11 +588,11 @@ $('#mainMenu').addEventListener('click',e=>{const b=e.target.closest('[data-act]
   if(a==='continue'){const s=hasSave();if(s)startGame(s,false)}if(a==='new')openNewWorld();if(a==='settings')openSettings();if(a==='howto')openHowto()});
 $('#mainMenu').addEventListener('pointerover',e=>{if(e.target.closest('.mbtn'))audio.play('hover')});
 // ================= loop =================
-const autoQ={t:0,frames:0,acc:0,lock:settings.quality!=='auto'};let fpsT=0,fpsN=0,markT=0,sigT=0,qT=0,saveT=0;const sigs=new Map();
+const autoQ={t:0,frames:0,acc:0,cool:0,lock:settings.quality!=='auto'};let fpsT=0,fpsN=0,markT=0,sigT=0,qT=0,saveT=0;const sigs=new Map();
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);const rdt=Math.min(0.1,(now-last)/1000);last=now;const dt=Math.min(rdt,0.05);
   fpsN++;fpsT+=rdt;if(fpsT>0.5){const f=fpsN/fpsT;if(settings.fps)$('#fps').textContent=`${f.toFixed(0)} FPS · ${qLevel}`;
-    if(!autoQ.lock){autoQ.t+=fpsT;autoQ.acc+=f;autoQ.frames++;if(autoQ.t>3){const avg=autoQ.acc/autoQ.frames;const order=['low','medium','high','ultra'];const i=order.indexOf(qLevel);if(avg<38&&i>0)applyQuality(order[i-1]);else if(avg>58&&i<2&&autoQ.up!==false){}autoQ.t=0;autoQ.acc=0;autoQ.frames=0}}fpsN=0;fpsT=0}
+    if(!autoQ.lock){autoQ.t+=fpsT;autoQ.acc+=f;autoQ.frames++;if(autoQ.t>3){const avg=autoQ.acc/autoQ.frames;const order=['low','medium','high','ultra'];const i=order.indexOf(qLevel);if(autoQ.cool>0)autoQ.cool-=autoQ.t;else if(avg<40&&i>0){applyQuality(order[i-1]);autoQ.cool=8}else if(avg>58&&i<2){applyQuality(order[i+1]);autoQ.cool=12}autoQ.t=0;autoQ.acc=0;autoQ.frames=0}}fpsN=0;fpsT=0}
   const playing=mode==='play'&&!curModal;
   waveState.time+=dt;timeU.value=waveState.time;
   if(playing){updateTime(dt);st.play+=dt}else if(mode==='title'){st.clock=1.42+Math.sin(now*0.00002)*0.02}
@@ -579,17 +602,18 @@ function frame(now){requestAnimationFrame(frame);const rdt=Math.min(0.1,(now-las
     sigT+=dt;if(sigT>0.3){sigT=0;for(const b of raft.bmap.values()){const s=bSig(b);if(sigs.get(b.data.id)!==s){sigs.set(b.data.id,s);raft.refreshVisual(b)}}}
     qT+=dt;if(qT>0.5){qT=0;checkQuest();if(buildOn)renderBuildbar()}saveT+=dt;if(saveT>20){saveT=0;saveGame()}}
   else if(mode==='title'){updateDebris(dt*0.5)}
-  updateShark(playing||mode==='title'?dt:0);updatePlayer(dt);updateCat(dt);updateCrab(playing?dt:0,now);updateAmbient(dt);updateFish(dt);parts.update(dt);
-  if(mode==='title'&&fish.st==='none'){PA.hold='rod';bobber.visible=true;fishLine.visible=true;const bx=3.2,bz=6.5;bobber.position.set(bx,waveHeight(bx,bz),bz);const tip=P.rodTip.getWorldPosition(new THREE.Vector3()),a=lineGeo.attributes.position;for(let i=0;i<=20;i++){const k=i/20;a.setXYZ(i,lerp(tip.x,bx,k),lerp(tip.y,bobber.position.y,k)-Math.sin(k*Math.PI)*0.5,lerp(tip.z,bz,k))}a.needsUpdate=true}
+  updateShark(playing||mode==='title'?dt:0);updatePlayer(dt);raft.house.update(dt,pl.x,pl.z,pl.l===1&&mode==='play');updateCat(dt);updateCrab(playing?dt:0,now);updateAmbient(dt);updateFish(dt);parts.update(dt);viewModel.update(dt,pl.tool,pl.speed,PA.action,fish.st!=='none',mode==='play'&&!!CAMS[settings.cam|0].fp&&!curModal);
+  if(mode==='title'&&fish.st==='none'){PA.hold='rod';bobber.visible=true;fishLine.visible=true;const bx=3.2,bz=6.5;bobber.position.set(bx,waveHeight(bx,bz),bz);const tip=equippedTip('rod'),a=lineGeo.attributes.position;for(let i=0;i<=20;i++){const k=i/20;a.setXYZ(i,lerp(tip.x,bx,k),lerp(tip.y,bobber.position.y,k)-Math.sin(k*Math.PI)*0.5,lerp(tip.z,bz,k))}a.needsUpdate=true}
   // lanterns & night lights
   const nl=env.night;MAT.lamp.emissiveIntensity=0.4+nl*3;MAT.glass.emissiveIntensity=nl*1.6;lampLight.intensity=nl*9;winLight.intensity=nl*4;for(const g of glows)g.material.opacity=nl*0.9;
   for(const b of raft.bmap.values())if(b.data.type==='sprinkler'){const P2=b.obj.parts,s=b.data.s||{};P2.head.rotation.y+=dt*((s.w||0)>=1?4:0.5)}else if(b.data.type==='buoy'){const P2=b.obj.parts;P2.bob.position.y=-0.3+Math.sin(now*0.002+b.data.id)*0.06;P2.bob.rotation.z=Math.sin(now*0.0013)*0.08}else if(b.data.type==='winch'){b.obj.parts.drum.rotation.x+=dt*0.8}else if(b.data.type==='smoker'){const s=b.data.s||{},P2=b.obj.parts;const on=(s.q|0)>0;P2.fire.material.emissiveIntensity=on?1.6+Math.sin(now*0.011)*0.5:0;if(on&&Math.random()<dt*1.2){const w=b.obj.group.localToWorld(new THREE.Vector3(0.16,1.32,0));parts.emit({x:w.x,y:w.y,z:w.z,count:1,spread:0.04,vel:[0.2,0.6,0],vr:0.1,life:2.2,size:[0.08,0.22],color:'#cfd3d6',alpha:0.3,gravity:0.25,drag:0.3})}}
   else if(b.data.type==='grill'||b.data.type==='purifier'){const s=b.data.s||{},P2=b.obj.parts;if(P2.coals)P2.coals.material.emissiveIntensity=s.fish&&s.t<1?1.5+Math.sin(now*0.01)*0.4:0;if(P2.fire)P2.fire.material.emissiveIntensity=s.b?2+Math.sin(now*0.013)*0.6:0}
-  // camera
+  // camera: focal zoom changes projection, not just follow distance.
+  const wantedFov=cam.baseFov/cam.zoom;if(Math.abs(camera.fov-wantedFov)>.005){camera.fov=damp(camera.fov,wantedFov,12,rdt);camera.updateProjectionMatrix();parts.u.uScale.value=pix.sceneHeight()/(2*Math.tan(camera.fov*Math.PI/360))}
   const pw=playerWorld();
   if(mode==='title'){cam.yaw+=dt*0.035;const tx=0.4,ty=1.6,tz=0.6,r=17,pp=0.2;camera.position.set(tx+Math.sin(cam.yaw)*Math.cos(pp)*r,ty+Math.sin(pp)*r,tz+Math.cos(cam.yaw)*Math.cos(pp)*r);camera.lookAt(tx-Math.cos(cam.yaw)*3.5,ty+1.4,tz+Math.sin(cam.yaw)*3.5)}
   else{cam.yaw=damp(cam.yaw,cam.tyaw,14,rdt);cam.pitch=damp(cam.pitch,cam.tpitch,14,rdt);cam.dist=damp(cam.dist,cam.tdist,8,rdt);cam.tx=damp(cam.tx,pw.x,10,rdt);cam.ty=damp(cam.ty,pw.y,6,rdt);cam.tz=damp(cam.tz,pw.z,10,rdt);
-    const fpm=CAMS[settings.cam|0].fp;P.root.visible=!fpm;if(fpm){const hy=cam.ty+1.55,lp=cam.pitch-0.45;camera.position.set(cam.tx,hy,cam.tz);camera.lookAt(cam.tx-Math.sin(cam.yaw)*Math.cos(lp),hy-Math.sin(lp),cam.tz-Math.cos(cam.yaw)*Math.cos(lp))}else{
+    const fpm=CAMS[settings.cam|0].fp;P.root.visible=!fpm;if(fpm){cam.bob+=dt*pl.speed*2.2;const bob=pl.speed>.2?Math.sin(cam.bob*2.4)*.018*Math.min(1,pl.speed/3):0,hy=cam.ty+1.55+bob,lp=cam.pitch;camera.position.set(cam.tx,hy,cam.tz);camera.lookAt(cam.tx-Math.sin(cam.yaw)*Math.cos(lp),hy-Math.sin(lp),cam.tz-Math.cos(cam.yaw)*Math.cos(lp))}else{
     const cy=cam.ty+1.25;camera.position.set(cam.tx+Math.sin(cam.yaw)*Math.cos(cam.pitch)*cam.dist,Math.max(0.6,cy+Math.sin(cam.pitch)*cam.dist),cam.tz+Math.cos(cam.yaw)*Math.cos(cam.pitch)*cam.dist);camera.lookAt(cam.tx,cy,cam.tz)}}
   camera.updateMatrixWorld();
   // interactions/hud
@@ -611,4 +635,4 @@ audio.vol={master:settings.master,music:settings.music,sfx:settings.sfx};$('#fps
 setLoad(90,'Setting the sun…');
 renderer.compile(scene,camera);
 requestAnimationFrame(t=>{last=t;frame(t);setLoad(100,'Ready');setTimeout(()=>{$('#loading').classList.add('done');$('#title').hidden=false;refreshTitle()},350)});
-window.__dw={throwHook,startCast,fishClick,eat,drink,give,openInventory,openPause,closeModal,sleep,updateGhost,get fishSt(){return fish.st},build:(type,i,j)=>{bsel=type;ghostCell=[i,j];if(type==='foundation')ghostCell.ok=raft.canFoundation(i,j)&&has(BP[type].cost);else{ghostCell.ok=raft.has(i,j)&&!raft.occupied(i,j)&&has(BP[type].cost)&&(!BP[type].edge||!!raft.edgeDir(i,j))}placeBuild()},get st(){return st},get mode(){return mode},pl,fish,sh,boatS,raft,debris,camera,cam,startGame,freshState,openShop,applyQuality,selectSlot,interact,get act(){return curAct}};
+window.__dw={throwHook,startCast,fishClick,eat,drink,give,openInventory,openHouseUpgrades,openPause,closeModal,sleep,updateGhost,renderer,settings,viewModel,get fishSt(){return fish.st},build:(type,i,j)=>{bsel=type;ghostCell=[i,j];if(type==='foundation')ghostCell.ok=raft.canFoundation(i,j)&&has(BP[type].cost);else{ghostCell.ok=raft.has(i,j)&&!raft.occupied(i,j)&&has(BP[type].cost)&&(!BP[type].edge||!!raft.edgeDir(i,j))}placeBuild()},get st(){return st},get mode(){return mode},pl,fish,sh,boatS,raft,debris,camera,cam,startGame,freshState,openShop,applyQuality,selectSlot,interact,get act(){return curAct},get keys(){return[...keys]},get modal(){return!!curModal}};

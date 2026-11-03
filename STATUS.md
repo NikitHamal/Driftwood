@@ -19,14 +19,19 @@ Last updated: overhaul session, branch `kimi`.
 6. Materials primarily used small albedo canvases and bump mapping, without a scene environment or full-resolution cinematic post processing.
 7. Auto quality could step down but its upgrade branch was empty. Static primitive geometry was repeatedly allocated.
 
-## Active overhaul
+## Implemented overhaul systems
 
-- Enterable cabin with real doorway, interior props, collision and animated door.
-- Persistent cabin upgrade tiers with visible additions and functional perks.
-- Pointer-lock first-person, center aiming, focal zoom, clean modal/pointer transitions.
-- Procedural PBR maps, image-based lighting, cinematic post pipeline and richer ocean response.
-- Geometry reuse, measured quality behavior, improved typography/HUD and documentation.
+- Enterable, furnished cabin with real segmented walls, windows, hinged animated door, matching interior collision, bed sleep interaction and three persistent visual/functional upgrade tiers.
+- Pointer-lock first-person with free mouse look, center aiming, camera-relative tool view-models, modal pointer release and focal zoom in all views.
+- Procedural wood/chipped-paint albedo, normal and roughness maps; PMREM environment lighting; full-resolution FXAA/AO/bloom pipeline; optional pixel-art path retained.
+- Shared primitive geometry, repaired auto-quality upgrade behavior, revised ocean highlight energy, new Manrope/Marcellus typography and responsive cabin UI.
+- Root `index.html` directly loads the source game and stylesheet. Standalone build strips both development references before inlining.
 
-## Validation ledger
+## Latest verification
 
-Detailed commands and results belong in `docs/CONTINUITY.md`. A feature is not marked verified until exercised in the built game. Headless WebGL screenshots and zero-error checks are required before final handoff.
+- `DW_FAST=1 DW_SHOTS=0 node scripts/verify.cjs`: PASS on WebGL 2 / SwiftShader.
+- Real inputs verified pointer lock, mouse look, 1.402× scroll zoom, W movement through the doorway (`z 0.9 → 0.24`), opening the upgrade modal with E and purchasing tier 1.
+- Zero console errors and zero uncaught page exceptions in that run.
+- Full-quality title, gameplay, first-person and upgrade screenshots captured; final interior/standalone capture remains part of final validation.
+
+Detailed commands and results are in `docs/CONTINUITY.md`.

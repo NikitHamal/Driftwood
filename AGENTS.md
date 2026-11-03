@@ -31,6 +31,9 @@ The root `index.html` must run the real source game directly. `build.sh` creates
 - `src/raft.js`: tile instances, structures, navigation and collision.
 - `src/ocean.js`, `src/sky.js`, `src/waves.js`: synchronized ocean and atmosphere.
 - `src/pixel.js`: full-resolution cinematic and optional pixel-art post pipeline.
+- `src/pbr.js`: procedural PBR surfaces and PMREM environment.
+- `src/viewmodel.js`: first-person tools, hands, sway and action response.
+- `scripts/verify.cjs`: repeatable Playwright input, upgrade and screenshot verification.
 - Keep CPU and GLSL wave functions synchronized. Avoid per-frame allocations and unbounded geometry/material creation. Reuse geometry where safe and dispose replaced render targets/textures.
 - Preserve v2 save keys (`driftwood.save.v2`, `driftwood.settings.v2`) and migrate missing fields. Existing worlds must remain playable.
 

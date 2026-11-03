@@ -42,7 +42,7 @@ export class Ocean{
           vec4 c=texture2D(tRefl,uv)*0.36+texture2D(tRefl,uv+vec2(o.x,o.y))*0.16+texture2D(tRefl,uv-vec2(o.x,o.y))*0.16+texture2D(tRefl,uv+vec2(o.x,-o.y))*0.16+texture2D(tRefl,uv+vec2(-o.x,o.y))*0.16;
           refl=mix(sky,c.rgb,c.a>0.?1.:0.);}
         vec3 col=mix(base,refl,fres*0.92);
-        vec3 H=normalize(uSunDir+V);float sp=pow(max(dot(N,H),0.),420.)*5.+pow(max(dot(N,H),0.),60.)*0.12;
+        vec3 H=normalize(uSunDir+V);float sp=pow(max(dot(N,H),0.),420.)*2.4+pow(max(dot(N,H),0.),60.)*0.08;
         col+=uSunColor*sp*smoothstep(-0.05,0.1,uSunDir.y);
         // stylised wind streaks
         float s=gnoise(vec2(q.x*0.22-t*0.35,q.y*1.9+t*0.08)+n1*0.6);

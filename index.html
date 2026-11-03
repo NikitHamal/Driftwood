@@ -1,8 +1,11 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Driftwood — Survival at Sea</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b3542'/%3E%3Cpath d='M18 13h14c13 0 20 7 20 19S45 51 32 51H18V13zm12 9v20h3c6 0 9-3 9-10s-3-10-9-10h-3z' fill='%23e9c883'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#071b24"><meta name="description" content="Driftwood — a rich 3D survival life aboard an endless sea.">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Marcellus&display=swap" rel="stylesheet">
 <style>/*CSS*/</style></head>
 <body>
 <canvas id="c"></canvas>
@@ -18,7 +21,7 @@
       <button class="mbtn" data-act="howto"><span class="mb-t">How to Play</span><span class="mb-s">Controls and survival tips</span></button>
     </nav>
   </div>
-  <div class="title-foot"><span>v1.0</span><span>Built with Three.js</span></div>
+  <div class="title-foot"><span>v2.0 · Overhauled</span><span>Built with Three.js</span></div>
 </section>
 <section id="hud" hidden>
   <div id="clock" class="glass"><div class="clk-ico" id="clkIco"></div><div><div class="clk-day" id="clkDay">Day 1</div><div class="clk-time"><span id="clkTime">07:00</span><span class="dot">•</span><span id="clkWx">Clear</span></div><div class="rn"><b id="rnL">Renown 1</b><i><s id="rnB"></s></i></div></div></div>
@@ -33,11 +36,13 @@
   <div id="hotbar"></div>
   <div id="fishbar" hidden><div class="fb-title" id="fbTitle">Reel it in!</div><div class="fb-track"><div class="fb-zone" id="fbZone"></div><div class="fb-mark" id="fbMark"></div></div><div class="fb-hint">Click or press <kbd>Space</kbd> in the green zone</div></div>
   <div id="tooltip"></div>
-  <div id="hint">WASD move · Drag to look · Scroll zoom · <b>E</b> interact · <b>Tab</b> bag · <b>C</b> camera</div>
+  <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div id="optics">FOCUS <b>1.0×</b></div>
+  <div id="hint">WASD move · Drag to orbit · Scroll focus zoom · <b>E</b> interact · <b>Tab</b> bag · <b>C</b> camera</div>
   <div id="joy" hidden><div id="joyKnob"></div></div><button id="mobUse" hidden>E</button>
 </section>
 <div id="fps" hidden></div>
 <div id="modals"></div>
 <div id="fade"></div>
+<script type="module" src="./src/main.js"></script>
 <script>/*JS*/</script>
 </body></html>

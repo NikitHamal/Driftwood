@@ -9,6 +9,7 @@ else echo 'Install esbuild first: npm install --no-save esbuild' >&2; exit 1; fi
 "$ESBUILD" src/main.js --bundle --format=iife --minify --target=es2020 --outfile=dist/game.js --log-level=warning
 python3 - <<'PY'
 h=open('index.html',encoding='utf-8').read();c=open('style.css',encoding='utf-8').read();j=open('dist/game.js',encoding='utf-8').read()
-h=h.replace('/*CSS*/',c).replace('<script>/*JS*/</script>','<script>'+j.replace('</script','<\\/script')+'</script>')
+h=h.replace('<script type="module" src="./src/main.js"></script>','').replace('<link rel="stylesheet" href="./style.css">','')
+h=h.replace('/*CSS*/',c).replace('<script>/*JS*/</script>','<script>'+j.replace('</script','<\\\\/script')+'</script>')
 open('dist/Driftwood.html','w',encoding='utf-8').write(h)
 PY
