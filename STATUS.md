@@ -26,6 +26,9 @@ Last updated: overhaul session, branch `kimi`.
 - Procedural wood/chipped-paint albedo, normal and roughness maps; PMREM environment lighting; full-resolution FXAA/AO/bloom pipeline; optional pixel-art path retained.
 - Shared primitive geometry, repaired auto-quality upgrade behavior, revised ocean highlight energy, new Manrope/Marcellus typography and responsive cabin UI.
 - Root `index.html` directly loads the source game and stylesheet. Standalone build strips both development references before inlining.
+- Repair Bench and Salvage Bell are fully implemented with building, resources, offline simulation, visible output, objectives and persistence.
+- Reef shark, hammerhead and three-stage great-white encounters have distinct targeting, speed, damage, defense and rewards.
+- Static cabin batching retains detail while reducing the verified scene to 89 total render calls and 165 geometries in the diagnostic run. Tile integrity now persists in saves.
 
 ## Latest verification
 

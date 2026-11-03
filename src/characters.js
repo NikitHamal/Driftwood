@@ -109,6 +109,8 @@ export function makeShark(){const R={root:new THREE.Group()};const g=M('#5f7d8c'
   const fin=mesh(new THREE.ConeGeometry(0.28,0.75,3),g,0,0.6,-0.1,b);fin.scale.set(0.25,1,1.2);fin.rotation.x=-0.35;R.fin=fin;
   for(const s of[-1,1]){const pf=box(0.7,0.04,0.3,g,s*0.45,-0.2,0.35,b);pf.rotation.z=s*-0.4;pf.rotation.y=s*0.3;sph(0.035,M('#111',0.2),s*0.25,0.08,1.05,b,8,6)}
   const tail=new THREE.Group();tail.position.z=-1.25;b.add(tail);R.tail=tail;const tf=box(0.05,0.9,0.35,g,0,0.15,-0.25,tail);tf.rotation.x=0.4;const tf2=box(0.05,0.5,0.3,g,0,-0.15,-0.2,tail);tf2.rotation.x=-0.5;
+  const hammer=new THREE.Group(),hh=sph(.3,g,0,.04,1.02,hammer,18,12);hh.scale.set(2.55,.34,.62);for(const s of[-1,1])sph(.045,M('#101719',.25),s*.68,.08,1.08,hammer,10,8);hammer.visible=false;b.add(hammer);R.hammer=hammer;
+  const scars=new THREE.Group();for(let i=0;i<3;i++){const sc=box(.012,.22,.025,wb,.355,.04,-.05+i*.13,scars);sc.rotation.z=-.35}scars.visible=false;b.add(scars);R.scars=scars;
   R.root.traverse(m=>{if(m.isMesh)m.castShadow=true});return R}
 // ---------- trader boat ----------
 export function makeBoat(sailTex){const g=new THREE.Group();const hull=new THREE.Group();g.add(hull);

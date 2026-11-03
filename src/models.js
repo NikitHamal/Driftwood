@@ -216,6 +216,8 @@ export const BP={
   sprinkler:{name:'Sprinkler',desc:'Waters planters on neighbouring tiles automatically.',cost:{plastic:6,scrap:2,wood:2},icon:'drop',r:0.3},
   buoy:{name:'Trade Buoy',desc:'Auto-sells spare goods for coins, even offline.',cost:{wood:4,plastic:6,scrap:2},icon:'coin',edge:true},
   lamp:{name:'Lantern Post',desc:'Warm light for long nights.',cost:{wood:3,scrap:1},icon:'lamp',r:0.2},
+  repair:{name:'Repair Bench',desc:'Spend scrap to restore every damaged raft foundation.',cost:{wood:8,scrap:4,fiber:2},icon:'hammer',r:0.55},
+  diver:{name:'Salvage Bell',desc:'Dives for scrap and occasional pearls, even while you are away.',cost:{wood:8,scrap:6,fiber:8,plastic:4},icon:'pearl',edge:true},
 };
 export function makeStation(type){
   const g=new THREE.Group(),P={};
@@ -262,7 +264,9 @@ export function makeStation(type){
   }else if(type==='buoy'){const f=new THREE.Group();g.add(f);f.position.set(0,-0.3,1.7);P.bob=f;const b=sph(0.32,MAT.red,0,0.1,0,f,14,10);b.scale.y=0.7;const band=cyl(0.33,0.33,0.07,MAT.white,0,0.12,0,f,14);
     cyl(0.03,0.03,0.8,MAT.metal,0,0.6,0,f,5);const flag=box(0.28,0.18,0.01,M('#f6c443',0.7),0.15,0.9,0,f);box(0.3,0.25,0.25,MAT.plank,0,0.42,0,f);g.add(rope(new THREE.Vector3(0,0.1,1.25),new THREE.Vector3(0,-0.1,1.7),0.1,0.01));
     box(0.06,0.4,0.06,MAT.darkWood,0,0.2,1.2,g);
-  }else if(type==='lamp'){cyl(0.04,0.05,1.6,MAT.darkWood,0,0.8,0,g,6);box(0.4,0.04,0.04,MAT.darkWood,0.15,1.55,0,g);const l=makeLantern();l.position.set(0.3,1.22,0);g.add(l);P.lamp=l;}
+  }else if(type==='lamp'){cyl(0.04,0.05,1.6,MAT.darkWood,0,0.8,0,g,6);box(0.4,0.04,0.04,MAT.darkWood,0.15,1.55,0,g);const l=makeLantern();l.position.set(0.3,1.22,0);g.add(l);P.lamp=l;
+  }else if(type==='repair'){box(1.05,.12,.62,MAT.plank,0,.72,0,g);for(const x of[-.43,.43])for(const z of[-.23,.23])box(.075,.7,.075,MAT.darkWood,x,.35,z,g);box(.36,.045,.12,MAT.metal,-.2,.81,0,g);cyl(.025,.025,.42,MAT.darkWood,.24,.88,0,g,8).rotation.z=1.05;box(.16,.12,.2,MAT.metal,.33,.82,.08,g);for(let i=0;i<3;i++)cyl(.018,.018,.22,MAT.metal,-.3+i*.15,.91,-.14,g,7).rotation.z=.3+i*.25;
+  }else if(type==='diver'){const f=new THREE.Group();f.position.set(0,-.55,1.55);g.add(f);const bell=mesh(new THREE.SphereGeometry(.44,20,12,0,Math.PI*2,0,Math.PI/2),MAT.metal,0,.05,0,f);const skirt=mesh(new THREE.CylinderGeometry(.44,.5,.48,20,1,true),MAT.metal,0,-.18,0,f);skirt.material=MAT.metal.clone();skirt.material.side=THREE.DoubleSide;const rim=mesh(new THREE.TorusGeometry(.5,.035,8,24),MAT.metal,0,-.42,0,f);rim.rotation.x=Math.PI/2;const win=cyl(.11,.11,.025,MAT.glass,0,.05,.4,f,16);win.rotation.x=Math.PI/2;for(const x of[-.32,.32])g.add(rope(new THREE.Vector3(x,.35,1.15),new THREE.Vector3(x,-.4,1.55),.04,.012));box(.9,.08,.7,MAT.darkWood,0,.12,.65,g);cyl(.13,.13,.5,MAT.drum,0,.55,.6,g,14).rotation.z=Math.PI/2;P.loot=new THREE.Group();P.loot.position.set(0,.18,.2);g.add(P.loot);}
   return {group:g,parts:P};
 }
 // ---------------- crops ----------------

@@ -1,6 +1,7 @@
 import * as THREE from '../three.module.js';
 import { MAT, DECK, BAL, makeTree, makePot, makeCrate, makeBarrel, makeLantern, makeLifeRing, rope } from './models.js';
 import { M, mesh, box, cyl, sph, damp } from './util.js';
+import { batchStatic } from './batch.js';
 
 const CZ0=-1.35,CZ1=.35,CW=2.2,CH=1.95,CY=BAL+.035;
 function frontWindow(g,x,y,z,w=.66,h=.68){
@@ -70,5 +71,5 @@ export function makeHouse(){
   let level=0,target=0;const api={group:g,lanterns:[lamp,lampW],ladder:{x:lx,z:lz+.45,topZ:lz-.35},door:doorPivot,bed:{x:.57,z:-.7},upgradePoint:{x:-.55,z:.9},doorOpen:0,
     setLevel(n){level=Math.max(0,Math.min(3,n|0));tiers.forEach((t,i)=>t.visible=i<level)},get level(){return level},
     update(dt,x,z,onBalcony){const near=onBalcony&&Math.hypot(x+.55,z-.55)<1.15;target=near?1:0;this.doorOpen=damp(this.doorOpen,target,9,dt);doorPivot.rotation.y=this.doorOpen*1.72;}};
-  api.setLevel(0);return api;
+  tiers.forEach(t=>{t.userData.dynamic=true;batchStatic(t)});batchStatic(g);api.setLevel(0);return api;
 }

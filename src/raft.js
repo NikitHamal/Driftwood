@@ -51,6 +51,7 @@ export class Raft{
     if(type==='pearl'){P.pearls.clear();for(let k=0;k<Math.min(6,s.n|0);k++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.06,10,8),PEARL);m.position.set(-0.45+(k%3)*0.45,-0.33+Math.floor(k/3)*0.1,0);P.pearls.add(m)}}
     if(type==='winch'){P.loot.clear();for(let k=0;k<Math.min(5,(s.items||[]).length);k++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.07,0.1),MAT.plank);m.position.set(-0.15+(k%3)*0.15,Math.floor(k/3)*0.08,0);m.rotation.y=k;P.loot.add(m)}}
     if(type==='net'){P.loot.clear();for(let k=0;k<Math.min(6,(s.items||[]).length);k++){const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.08,0.12),MAT.plank);m.position.set(-0.8+k*0.32,0.05,-0.08);m.rotation.y=k;P.loot.add(m)}}
+    if(type==='diver'){P.loot.clear();for(let k=0;k<Math.min(5,s.n|0);k++)box(.17,.1,.13,MAT.metal,-.3+k*.15,k*.07,0,P.loot);for(let k=0;k<Math.min(2,s.p|0);k++){const m=new THREE.Mesh(new THREE.SphereGeometry(.055,10,8),PEARL);m.position.set(.25+k*.13,.12,0);P.loot.add(m)}}
   }
   // collision
   walkable(x,z,level=0,rad=0.28){

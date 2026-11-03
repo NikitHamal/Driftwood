@@ -1,37 +1,40 @@
 # Architecture
 
-## Build and runtime
+Driftwood is a dependency-free browser game written in vanilla JavaScript, HTML and CSS. Three.js r160 is vendored in `three.module.js`; no React, TSX, runtime package CDN or network asset is required for core gameplay.
 
-`build.sh` bundles `src/main.js` with esbuild into `dist/game.js`, then injects the bundle and `style.css` into the placeholders in `index.html`, writing `dist/Driftwood.html`. The shipped HTML includes the game code and vendored Three.js; optional web fonts fall back to system fonts. Run the generated HTML, not the unprocessed template.
+## Entry and build
 
-The browser initializes a Three.js renderer, scene, camera, lighting, procedural geometry/textures and DOM UI. A requestAnimationFrame loop advances the world, renders the scene and updates HUD elements. Game time and simulation use delta time, capped to limit large frame jumps; performance can affect apparent simulation speed under severe load.
+- `index.html` is the live source entry. It loads `style.css` and `src/main.js` directly and contains markers for standalone generation.
+- `build.sh` uses esbuild to bundle/minify `src/main.js`, strips the source module and stylesheet references, then injects CSS and JavaScript into `dist/Driftwood.html`.
+- `dist/game.js` is an ignored intermediate. `dist/Driftwood.html` is the self-contained playable artifact.
 
-## Source map
+## Modules
 
-| File | Responsibility |
+| Module | Responsibility |
 | --- | --- |
-| `src/main.js` | Setup, game state, frame loop, movement and interactions, station simulation, world events, UI, saving/loading and debug interface |
-| `src/waves.js` | CPU wave height/gradient and corresponding GLSL for consistent water and floating objects |
-| `src/ocean.js` | Ocean mesh and shader, reflection render target, foam mask, wind streaks and fog |
-| `src/sky.js` | Sky dome, clouds and celestial elements |
-| `src/models.js` | Procedural cabin, objects, station models and blueprint/debris definitions |
-| `src/raft.js` | Raft tile geometry, occupancy, placement, walking, edges and building instances |
-| `src/characters.js` | Player rig and animation, cat, gulls, shark and trader boat |
-| `src/textures.js` | Canvas-generated surface textures and sprites |
-| `src/particles.js` | Particle effects and rain |
-| `src/icons.js` | HUD icons and item presentation definitions |
-| `src/audio.js` | Procedural sound and music |
-| `src/util.js` | Shared math and geometry helpers |
-| `index.html`, `style.css` | UI/template and styling |
+| `main.js` | State machine, fixed-cap delta loop, survival, quests, input, camera, UI, trading, save migration and offline progress |
+| `house.js` | Segmented enterable cabin, hinged door, furniture, roof, visual upgrade tiers and static batch boundaries |
+| `raft.js` | Instanced tile geometry, building lifecycle, visual station output, tile health and walkability/collision |
+| `models.js` | Shared materials, foliage, props, blueprint data, stations, crops and debris |
+| `characters.js` | Player/trader rigs, companion, gulls, shark variants and trader boat |
+| `viewmodel.js` | Camera-relative first-person hands/tools, sway and action response on reflection-excluded layer 1 |
+| `pbr.js` | Seeded local albedo/normal/roughness data textures and PMREM environment |
+| `batch.js` | Material-compatible opaque static geometry merging with dynamic/transparent exclusions |
+| `ocean.js`, `waves.js` | Radial ocean mesh, synchronized CPU/GLSL waves, reflections, foam and water shading |
+| `sky.js`, `particles.js` | Atmosphere, clouds, weather and pooled effects |
+| `pixel.js` | HDR scene target, depth texture, FXAA, depth AO, restrained bloom, grading and optional pixel treatment |
+| `audio.js`, `icons.js`, `textures.js`, `util.js` | Procedural audio, inline SVG icons, auxiliary textures and shared math/geometry caches |
 
-## State and persistence
+## Render flow
 
-`freshState()` creates a world containing identity/mode, clock/weather, vitals, inventory, raft tile coordinates, building records and their state, upgrades, quest progress, statistics, player position and event scheduling. `applyState()` reconstructs scene objects. `migrate()` backfills missing fields when loading. Current constants: tile width `T=2.4`; `DECK=0.42`, `BAL=2.6`.
+The default path renders the scene into a full-resolution half-float target with depth, then performs one post blit. FXAA handles edges, depth AO is distance-limited, bloom only lifts restrained highlights, and ACES/output conversion happens in the final pass. Pixel-art modes reuse the same pipeline at reduced target resolution with outlines, dithering and quantization. Low quality disables AO/bloom and reflections/shadows according to the quality table.
 
-A single world is saved as JSON under `driftwood.save.v2`, settings under `driftwood.settings.v2`. Save events include world creation, periodic autosave, day changes, sleep, visibility/unload and Save & Quit. Storage can fail or be cleared; there is no server backup. Treat schema changes as migrations, not silent resets.
+The cabin is batched per material and per upgrade tier. The moving door, glass, instanced foliage and shader meshes are never merged. This preserves silhouette, normals, UVs, vertex color, upgrade visibility and every source triangle while reducing draw overhead.
 
-On Continue, station simulation can advance based on elapsed real time, capped at eight hours. It is station-specific rather than a full replay of the world: do not assume weather, hunger, shark attacks or every world system are simulated offline. The away summary reports qualifying changes ready to collect.
+The ocean reflection uses a mirrored camera on layer 0. First-person tools and glow sprites use layer 1 and therefore do not contaminate reflections. Renderer info reset is manual so diagnostics include reflection, scene and post passes.
 
-## Performance and debugging
+## Simulation and persistence
 
-Quality presets change pixel ratio, shadow maps and reflection resolution; Low disables reflections and shadows. Automatic quality can downgrade. `window.__dw` exposes selected state and actions for development, including state getters and test helpers; it is not a stable public API.
+Gameplay uses capped frame deltas. Production also accepts explicit elapsed seconds for sleep/offline simulation; it is not tied to frame count. `window.__dw` exposes diagnostics and test hooks, but browser verification also uses real keyboard, pointer and button inputs.
+
+The v2 save keys remain `driftwood.save.v2` and `driftwood.settings.v2`. Migration fills new fields including `houseLv` and serialized tile `health`. Save writes player location, structure state and the Raft health map; Continue restores them before offline simulation.

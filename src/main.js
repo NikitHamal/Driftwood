@@ -19,7 +19,7 @@ const setLoad=(p,t)=>{$('#loadFill').style.width=p+'%';if(t)$('#loadTip').textCo
 const canvas=$('#c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.info.autoReset=false;
 const scene=new THREE.Scene();scene.fog=new THREE.Fog(0xbfe9f0,140,1500);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,0.1,5000);camera.layers.enable(1);scene.add(camera);
 const pix=new PixelPass(renderer,camera);
@@ -131,7 +131,9 @@ const QUESTS=[
  {t:'Trade with Marlo',d:'The merchant visits every day between 09:00 and 15:00.',k:'sold',n:1,r:{coins:25}},
  {t:'Build a Debris Net',d:'Place it on an outer edge to catch debris automatically.',k:'b:net',n:1,r:{fiber:4}},
  {t:'Build a Fish Trap',d:'Fish traps fill up even while you are away.',k:'b:trap',n:1,r:{coins:20}},
- {t:'Grow your raft to 16 tiles',d:'A bigger home holds more of everything.',k:'tileCount',n:16,r:{coins:60}},
+  {t:'Grow your raft to 16 tiles',d:'A bigger home holds more of everything.',k:'tileCount',n:16,r:{coins:60}},
+  {t:'Build a Repair Bench',d:'Repair shark damage with scrap before foundations break.',k:'b:repair',n:1,r:{scrap:4}},
+  {t:'Build a Salvage Bell',d:'Place it on an outer edge to recover scrap and pearls.',k:'b:diver',n:1,r:{coins:45}},
  {t:'Earn 400 coins trading',d:'Sell your fish and crops to Marlo.',k:'earned',n:400,r:{coins:100}},
  {t:'Survive 10 days',d:'You are becoming a true sea dweller.',k:'day',n:10,r:{coins:200}},
  {t:'Build a Smokehouse',d:'Load raw fish; it smokes them slowly into valuable smoked fish.',k:'b:smoker',n:1,r:{coins:30}},
@@ -144,7 +146,7 @@ const QUESTS=[
 const NAMES=['Seabreeze','Saltwind','Lantern Bay','Driftwood Haven','Coral Rest','Gullsong','Bluewater','Tidewatch'];
 const INV0={wood:8,plastic:4,fiber:2,scrap:1,rawFish:0,cookedFish:1,water:1,potato:0,melon:0,seedPotato:3,seedMelon:0,coins:15};
 function freshState(name,mode){const t=[];for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)t.push([i,j]);
-  return{v:2,name,mode,created:Date.now(),saved:Date.now(),clock:1.3,weather:{type:'clear',until:1.55},vit:{hp:100,food:90,water:85},inv:{...INV0},tiles:t,b:[],nid:1,houseLv:0,up:{rod:0,hook:0,still:0,coil:0,crab:0,store:0},quest:0,
+  return{v:2,name,mode,created:Date.now(),saved:Date.now(),clock:1.3,weather:{type:'clear',until:1.55},vit:{hp:100,food:90,water:85},inv:{...INV0},tiles:t,b:[],health:[],nid:1,houseLv:0,up:{rod:0,hook:0,still:0,coil:0,crab:0,store:0},quest:0,
     stats:{crab:0,debris:0,fish:0,ate:0,drank:0,planted:0,harvest:0,sold:0,earned:0,built:{},tiles:0,sharks:0},player:{x:0,z:2.5,l:0},xp:0,sharkNext:200,seedSel:'potato',play:0}}
 function showcase(){const s=freshState('Showcase','cozy');s.houseLv=3;s.tiles.push([-1,2],[0,2],[1,2],[2,0],[2,1]);
   s.b=[{id:1,type:'planter',tile:[-1,1],s:{crop:'potato',grow:0.8}},{id:2,type:'grill',tile:[1,1],s:{}},{id:3,type:'rain',tile:[1,-1],s:{n:2}},{id:4,type:'net',tile:[0,2],s:{items:[]}},{id:5,type:'planter',tile:[2,0],s:{crop:'melon',grow:1}},{id:6,type:'lamp',tile:[-1,-1],s:{}}];return s}
@@ -169,11 +171,11 @@ function equippedTip(kind='rod'){if(mode==='play'&&CAMS[settings.cam|0]?.fp)retu
 // ================= raft state application =================
 function applyState(){
   raft.setTiles(st.tiles);raft.house.setLevel(st.houseLv||0);for(const id of[...raft.bmap.keys()])raft.removeBuilding(id);for(const b of st.b)raft.addBuilding(b);
-  ocean.setFoam(st.tiles,T);raft.health.clear();
+  ocean.setFoam(st.tiles,T);raft.health.clear();for(const[k,v]of st.health||[])raft.health.set(k,v);
   pl.x=st.player.x;pl.z=st.player.z;pl.l=st.player.l||0;if(!raft.walkable(pl.x,pl.z,pl.l)){pl.x=0;pl.z=2.5;pl.l=0;if(!raft.walkable(pl.x,pl.z,0))respawnSpot()}
   pl.lock=0;pl.climb=null;fish.st='none';hk.st='none';cancelBuild();
   catS.x=-1.4;catS.z=2.0;for(const d of debris)scene.remove(d.obj);debris.length=0;for(let i=0;i<10;i++)spawnDebris(true);
-  shark.root.visible=st.mode!=='cozy';sh.st='circle';boatS.st='away';boat.group.visible=false;
+  shark.root.visible=st.mode!=='cozy';shark.root.scale.setScalar(1);shark.hammer.visible=shark.scars.visible=false;sh.st='circle';sh.kind='reef';sh.hp=0;boatS.st='away';boat.group.visible=false;
 }
 function respawnSpot(){for(const[i,j]of raft.list()){for(const[ox,oz]of[[0,0],[0.6,0.6],[-0.6,0.6]]){const x=i*T+ox,z=j*T+oz;if(raft.walkable(x,z,0)){pl.x=x;pl.z=z;pl.l=0;return}}}}
 // ================= debris =================
@@ -206,12 +208,13 @@ function simBuildings(sec,raining){sec*=SPD();
     case'trap':s.n=Math.min(6*CAP(),(s.n||0)+sec/70);break;
     case'smoker':if(s.q>0){s.t=(s.t||0)+sec/40;while(s.t>=1&&s.q>0){s.t-=1;s.q--;s.done=(s.done||0)+1}if(!s.q)s.t=0}break;
     case'pearl':s.n=Math.min(4*CAP(),(s.n||0)+sec/150);break;
+    case'diver':s.n=Math.min(5*CAP(),(s.n||0)+sec/95);s.p=Math.min(2,(s.p||0)+sec/430);break;
     case'winch':s.items=s.items||[];s.acc=(s.acc||0)+sec/28;while(s.acc>=1&&s.items.length<8*CAP()){s.acc-=1;s.items.push(rollType())}if(s.items.length>=8*CAP())s.acc=0;break;
     case'sprinkler':{s.w=Math.min(6,(s.w||0)+sec*(raining?1/12:1/90));const[ti,tj]=b.data.tile;for(const p of raft.bmap.values()){if(p.data.type!=='planter')continue;const ps=bState(p);if(Math.abs(p.data.tile[0]-ti)<=1&&Math.abs(p.data.tile[1]-tj)<=1&&ps.crop&&!ps.wet&&ps.grow<1&&s.w>=1){ps.wet=1;s.w-=1}}break}
     case'buoy':{s.acc=(s.acc||0)+sec/25;let guard=0;while(s.acc>=1&&guard++<2000){s.acc-=1;if((s.c||0)>=250*CAP()){s.acc=0;break}const k=['pearl','smokedFish','melon','cookedFish','potato','scrap'].find(k=>(st.inv[k]|0)>(k==='cookedFish'||k==='potato'||k==='melon'?4:2));if(!k){s.acc=0;break}st.inv[k]--;s.c=(s.c||0)+Math.ceil(SELL[k]*0.8);st.stats.sold++}break}
     case'net':s.items=s.items||[];s.acc=(s.acc||0)+sec/55;while(s.acc>=1&&s.items.length<10*CAP()){s.acc-=1;s.items.push(rollType())}if(s.items.length>=10*CAP())s.acc=0;break;}}
 }
-function bSig(b){const s=bState(b);return[s.fish|0,(s.t||0)>=1,s.crop||'',Math.floor((s.grow||0)*5),Math.floor(s.n||0),(s.items||[]).length,s.done|0,s.q|0,Math.floor(s.w||0),s.c|0].join('|')}
+function bSig(b){const s=bState(b);return[s.fish|0,(s.t||0)>=1,s.crop||'',Math.floor((s.grow||0)*5),Math.floor(s.n||0),(s.items||[]).length,s.done|0,s.q|0,Math.floor(s.w||0),s.c|0,Math.floor(s.p||0)].join('|')}
 function bStatus(b){const s=bState(b);switch(b.data.type){
   case'grill':if(s.fish&&s.t>=1)return{ready:1,icon:'cooked'};if(s.fish)return{pf:s.t,icon:'fire'};return null;
   case'purifier':if(s.done)return{ready:1,icon:'water',n:s.done};if(s.b)return{pf:s.t,icon:'drop'};return null;
@@ -220,6 +223,8 @@ function bStatus(b){const s=bState(b);switch(b.data.type){
   case'trap':return(s.n|0)>0?{ready:(s.n|0)>=2,icon:'fish',n:s.n|0}:null;
   case'smoker':if(s.done)return{ready:1,icon:'smoked',n:s.done};if(s.q)return{pf:s.t||0,icon:'fire'};return null;
   case'pearl':return(s.n|0)>0?{ready:1,icon:'pearl',n:s.n|0}:null;
+  case'diver':return(s.n|0)+(s.p|0)>0?{ready:(s.n|0)>=2||(s.p|0)>0,icon:(s.p|0)>0?'pearl':'crate',n:(s.n|0)+(s.p|0)}:null;
+  case'repair':{const n=[...raft.health.values()].filter(v=>v<99.5).length;return n?{ready:1,icon:'hammer',n}:null}
   case'winch':return(s.items||[]).length?{ready:s.items.length>=3,icon:'hook',n:s.items.length}:null;
   case'sprinkler':return{pf:Math.min(1,(s.w||0)/6),icon:'drop'};
   case'buoy':return(s.c|0)>0?{ready:(s.c|0)>=10,icon:'coin',n:s.c|0}:null;
@@ -246,6 +251,8 @@ function stationAction(b){const s=bState(b),I=st.inv;switch(b.data.type){
   case'winch':{const it=s.items||[];if(it.length)return{l:`Empty auto winch (${it.length} items)`,i:'hook',f:()=>{const o={};for(const t of it){const l=rollLoot(t);for(const k in l)o[k]=(o[k]||0)+l[k]}give(o);st.stats.debris+=it.length;s.items=[];audio.play('pickup')}};return{l:'Auto Winch — reeling in debris…',i:'hook',off:1}}
   case'sprinkler':{if(I.water>0&&(s.w||0)<5)return{l:`Fill sprinkler (1 water) · tank ${Math.floor(s.w||0)}/6`,i:'drop',f:()=>{I.water--;s.w=(s.w||0)+1;audio.play('drink')}};return{l:`Sprinkler · tank ${Math.floor(s.w||0)}/6 — waters nearby planters`,i:'drop',off:1}}
   case'buoy':{if(s.c|0)return{l:`Collect sales ${s.c|0} coins`,i:'coin',f:()=>{const c=s.c|0;give({coins:c});st.stats.earned+=c;s.c=0;audio.play('coin')}};return{l:'Trade Buoy — auto-sells spare pearls, smoked fish, crops & scrap',i:'coin',off:1}}
+  case'repair':{const keys=[...raft.health].filter(([,v])=>v<99.5).map(([k])=>k),cost=Math.max(1,Math.ceil(keys.length/3));if(keys.length&&I.scrap>=cost)return{l:`Repair ${keys.length} foundation${keys.length>1?'s':''} (${cost} scrap)`,i:'hammer',f:()=>{I.scrap-=cost;for(const k of keys)raft.health.set(k,Math.min(100,raft.health.get(k)+45));st.stats.repairs=(st.stats.repairs||0)+1;audio.play('build');toast('Foundations reinforced · +45 integrity')}};return{l:keys.length?`Repair Bench — needs ${cost} scrap`:'Repair Bench — all foundations sound',i:'hammer',off:1}}
+  case'diver':{const n=s.n|0,p=s.p|0;if(n+p>0)return{l:`Collect salvage · ${n*2} scrap${p?` + ${p} pearl${p>1?'s':''}`:''}`,i:p?'pearl':'crate',f:()=>{give({scrap:n*2,pearl:p});s.n-=n;s.p-=p;audio.play('pickup');parts.splash(...splashAt(b))}};return{l:`Salvage Bell — diving ${Math.round((s.n%1)*100)}%`,i:'hook',off:1}}
   case'lamp':return{l:s.off?'Light lantern':'Snuff lantern',i:'lamp',f:()=>{s.off=!s.off;audio.play('click')}};}
 }
 function splashAt(b){const[di,dj]=b.data.dir||[0,1];const p=worldPos(b.data.tile[0]*T+di*1.5,0,b.data.tile[1]*T+dj*1.5);return[p.x,p.z]}
@@ -324,19 +331,24 @@ function updateTime(dt){st.clock+=dt/DAY;const day=Math.floor(st.clock);if(day!=
   const w=st.weather;if(st.clock>w.until){if(w.type==='clear'&&Math.random()<0.3){w.type='rain';w.until=st.clock+rr(0.05,0.11);banner('Rain is coming','Rain Catchers will fill up quickly')}else{w.type='clear';w.until=st.clock+rr(0.15,0.4)}}
 }
 // ================= shark =================
-const sh={st:'circle',ang:0,x:20,z:0,tile:null,t:0,hp:0};
+const sh={st:'circle',ang:0,x:20,z:0,tile:null,t:0,hp:0,kind:'reef'};
 function sharkTiles(){return raft.list().filter(([i,j])=>!(i===0&&j===0)&&raft.edgeDir(i,j))}
+function startSharkAttack(){let candidates=sharkTiles();if(!candidates.length)return false;const day=Math.floor(st.clock),roll=Math.random();sh.kind=day>=7&&roll<.24?'great':day>=3&&roll<.48?'hammer':'reef';
+  if(sh.kind==='hammer'){const occupied=candidates.filter(([i,j])=>!!findB(i,j));if(occupied.length)candidates=occupied}sh.tile=pick(candidates);sh.hp=sh.kind==='great'?3:1;sh.st='approach';sh.t=0;shark.root.scale.setScalar(sh.kind==='great'?1.38:sh.kind==='hammer'?1.12:1);shark.hammer.visible=sh.kind==='hammer';shark.scars.visible=sh.kind==='great';
+  const name=sh.kind==='great'?'Great white':sh.kind==='hammer'?'Hammerhead':'Reef shark';banner(`${name} approaching!`,sh.kind==='great'?'Three-stage assault · repel it three times with E or the Hook':sh.kind==='hammer'?'It is targeting an occupied foundation — move fast':'It’s heading for your raft — fend it off with E or the Hook','warn');audio.play('warn');return true}
 function updateShark(dt){if(st.mode==='cozy'){shark.root.visible=false;return}shark.root.visible=true;const R=raft.bounds()+6;sh.t+=dt;let tx,tz,spd=3;
-  if(sh.st==='circle'){sh.ang+=dt*0.16;tx=Math.cos(sh.ang)*R;tz=Math.sin(sh.ang)*R;spd=3.2;if(mode==='play'&&!curModal){st.sharkNext-=dt;if(st.sharkNext<=0){const c=sharkTiles();if(c.length){sh.tile=pick(c);sh.st='approach';banner('Shark!','It’s heading for your raft — fend it off with E or the Hook','warn');audio.play('warn')}st.sharkNext=rr(180,300)}}}
-  if(sh.st==='approach'||sh.st==='attack'){const[i,j]=sh.tile,e=raft.edgeDir(i,j)||[0,1];if(!raft.has(i,j)){sh.st='flee';sh.t=0}else{tx=i*T+e[0]*2.1;tz=j*T+e[1]*2.1;spd=4.5;
+  if(sh.st==='circle'){sh.ang+=dt*0.16;tx=Math.cos(sh.ang)*R;tz=Math.sin(sh.ang)*R;spd=3.2;if(mode==='play'&&!curModal){st.sharkNext-=dt;if(st.sharkNext<=0){startSharkAttack();st.sharkNext=rr(180,300)}}}
+  if(sh.st==='approach'||sh.st==='attack'){const[i,j]=sh.tile,e=raft.edgeDir(i,j)||[0,1];if(!raft.has(i,j)){sh.st='flee';sh.t=0}else{tx=i*T+e[0]*2.1;tz=j*T+e[1]*2.1;spd=sh.kind==='hammer'?5.8:sh.kind==='great'?4.2+(3-sh.hp)*.55:4.5;
     if(sh.st==='approach'&&Math.hypot(sh.x-tx,sh.z-tz)<0.6){sh.st='attack';sh.t=0}
-    if(sh.st==='attack'){const key=raft.key(i,j);const h=(raft.health.get(key)??100)-dt*5.5;raft.health.set(key,h);if(Math.random()<0.15)parts.splash(tx-e[0]*0.6,tz-e[1]*0.6,0.8);if(Math.random()<0.02)audio.play('hit');if(h<=0)destroyTile(i,j)}}}
+    if(sh.st==='attack'){const key=raft.key(i,j);const h=(raft.health.get(key)??100)-dt*(sh.kind==='great'?11+(3-sh.hp)*2:sh.kind==='hammer'?8:5.5);raft.health.set(key,h);if(Math.random()<0.15)parts.splash(tx-e[0]*0.6,tz-e[1]*0.6,0.8);if(Math.random()<0.02)audio.play('hit');if(h<=0)destroyTile(i,j)}}}
   if(sh.st==='flee'){const a=Math.atan2(sh.z,sh.x);tx=Math.cos(a)*(R+25);tz=Math.sin(a)*(R+25);spd=7;if(sh.t>6){sh.st='circle';sh.ang=a}}
   const dx=tx-sh.x,dz=tz-sh.z,d=Math.hypot(dx,dz);if(d>0.05){const m=Math.min(d,spd*dt);sh.x+=dx/d*m;sh.z+=dz/d*m;shark.root.rotation.y=dampAngle(shark.root.rotation.y,Math.atan2(dx,dz),4,dt)}
   const att=sh.st==='attack';shark.root.position.set(sh.x,att?-0.25+Math.sin(sh.t*9)*0.12:-0.42,sh.z);shark.body.rotation.z=att?Math.sin(sh.t*7)*0.35:0;shark.tail.rotation.y=Math.sin(sh.t*(att?14:5))*0.45;
   for(const[k,v]of raft.health)if(!(att&&sh.tile&&k===raft.key(...sh.tile)))raft.health.set(k,Math.min(100,v+dt*2));
 }
-function scareShark(){if(sh.st!=='attack'&&sh.st!=='approach')return false;sh.st='flee';sh.t=0;st.stats.sharks++;audio.play('hit');audio.play('bigsplash');parts.splash(sh.x,sh.z,1.6);banner('Shark scared off!','It won’t be back for a while','gold');PA.play('throw',0.5);return true}
+function scareShark(){if(sh.st!=='attack'&&sh.st!=='approach')return false;audio.play('hit');parts.splash(sh.x,sh.z,sh.kind==='great'?2:1.4);PA.play('throw',.5);
+  if(sh.kind==='great'&&sh.hp>1){sh.hp--;sh.st='approach';sh.t=0;sh.x+=Math.sign(sh.x||1)*3.5;sh.z+=Math.sign(sh.z||1)*2;banner('Great white stunned',`${sh.hp} defensive hit${sh.hp>1?'s':''} left · its attack speed and damage increase`,'warn');return true}
+  sh.hp=0;sh.st='flee';sh.t=0;st.stats.sharks++;audio.play('bigsplash');if(sh.kind==='great')give({coins:40,scrap:4});banner(sh.kind==='great'?'Great white defeated!':sh.kind==='hammer'?'Hammerhead repelled!':'Shark scared off!',sh.kind==='great'?'+40 coins · +4 salvage scrap':'It won’t be back for a while','gold');return true}
 function destroyTile(i,j){const b=findB(i,j);if(b){raft.removeBuilding(b.data.id);st.b=st.b.filter(x=>x.id!==b.data.id)}st.tiles=st.tiles.filter(([a,c])=>!(a===i&&c===j));raft.setTiles(st.tiles);ocean.setFoam(st.tiles,T);raft.health.delete(raft.key(i,j));
   const p=worldPos(i*T,0,j*T);parts.splash(p.x,p.z,2);audio.play('bigsplash');banner('The shark wrecked a foundation','Keep your hook ready next time','warn');sh.st='flee';sh.t=0;spawnDebrisAt(p.x,p.z);if(!raft.walkable(pl.x,pl.z,pl.l))respawnSpot()}
 function spawnDebrisAt(x,z){for(let k=0;k<2;k++){spawnDebris(true);const d=debris[debris.length-1];if(d){d.x=x+rr(-1,1);d.z=z+rr(-1,1);d.type='plank'}}}
@@ -445,7 +457,7 @@ function renderBuildbar(){$('#buildbar').innerHTML=BKEYS.map(k=>{if(k==='demolis
 const mkPool=[];const _v=new THREE.Vector3();
 function updateMarkers(){const list=[];if(mode==='play'){
   for(const b of raft.bmap.values()){const s=bStatus(b);if(!s)continue;let p;if(BP[b.data.type].edge){const[di,dj]=b.data.dir;p=worldPos(b.data.tile[0]*T+di*0.9,DECK+1.3,b.data.tile[1]*T+dj*0.9)}else p=worldPos(b.data.tile[0]*T,DECK+(b.data.type==='rain'?1.9:1.4),b.data.tile[1]*T);list.push({p,...s})}
-  if(sh.st==='attack'||sh.st==='approach')list.push({p:new THREE.Vector3(sh.x,1.4,sh.z),warn:1,icon:'shark',lab:'Shark!'});
+  if(sh.st==='attack'||sh.st==='approach')list.push({p:new THREE.Vector3(sh.x,1.4,sh.z),warn:1,icon:'shark',lab:sh.kind==='great'?`Great white · ${sh.hp} hits`:sh.kind==='hammer'?'Hammerhead!':'Reef shark!'});
   if(boatS.st==='docked')list.push({p:new THREE.Vector3(boatS.x,3.8,boatS.z),icon:'boat',lab:'Marlo · Trader'});}
   const W=innerWidth,H=innerHeight;let n=0;
   for(const m of list){_v.copy(m.p).project(camera);if(_v.z>1||Math.abs(_v.x)>1.1||Math.abs(_v.y)>1.1)continue;let el=mkPool[n];if(!el){el=document.createElement('div');el.className='mk';el.innerHTML='<div class="b"><svg class="pr" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3"/><circle class="pv" cx="20" cy="20" r="17" fill="none" stroke="#ffd166" stroke-width="3" stroke-linecap="round" stroke-dasharray="106.8"/></svg><span class="ico"></span></div><div class="l"></div>';$('#markers').appendChild(el);mkPool.push(el)}
@@ -504,7 +516,7 @@ function openShop(tab='sell'){const I=st.inv;let body='';
   m.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const u=UPG[+b.dataset.up];I.coins-=u.p;st.up[u.id]=u.lv;if(u.id==='crab'){st.stats.crab=1;crab.x=pl.x;crab.z=pl.z}audio.play('quest');banner('Upgrade purchased',u.name,'gold');openShop('up')})}
 // ================= save / load / flow =================
 const hasSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE)||'null')}catch(e){return null}};
-function saveGame(){if(mode!=='play'||st.name==='Showcase')return;st.player={x:pl.x,z:pl.z,l:pl.l};st.saved=Date.now();try{localStorage.setItem(SAVE,JSON.stringify(st))}catch(e){}}
+function saveGame(){if(mode!=='play'||st.name==='Showcase')return;st.player={x:pl.x,z:pl.z,l:pl.l};st.health=[...raft.health];st.saved=Date.now();try{localStorage.setItem(SAVE,JSON.stringify(st))}catch(e){}}
 function fadeOut(mid){const f=$('#fade');f.classList.add('on');setTimeout(()=>{mid&&mid();setTimeout(()=>f.classList.remove('on'),120)},650)}
 function migrate(s){const f=freshState(s.name||'World',s.mode||'survival');for(const k in f)if(s[k]===undefined)s[k]=f[k];s.inv={...INV0,...s.inv};for(const k in INV0)if(s.inv[k]==null)s.inv[k]=0;s.stats={...f.stats,...s.stats};s.up={...f.up,...s.up};return s}
 function startGame(state,isNew){fadeOut(()=>{st=migrate(state);mode='play';lastDay=Math.floor(st.clock);warned={};applyState();$('#title').hidden=true;$('#hud').hidden=false;hudDirty=true;cam.tyaw=cam.yaw=0.5;setCam(settings.cam|0,true);pl.tool='hook';PA.hold=null;cancelFish();bobber.visible=false;fishLine.visible=false;
@@ -513,7 +525,7 @@ function startGame(state,isNew){fadeOut(()=>{st=migrate(state);mode='play';lastD
     if(gained.length)setTimeout(()=>openModal(head('Welcome back!',`You were away for ${fmtDur(away)}. Your raft kept working:`)+`<div class="away-list">${gained.map(([k,v])=>`<div class="it"><i style="color:${ITEM[k].color}">${ic(ITEM[k].icon)}</i><b>+${v}</b><span>${ITEM[k].name} ready</span></div>`).join('')}</div><p class="sub" style="margin-top:14px">Collect it from your stations with E.</p><div class="btns"><button class="btn pri" data-close>Let’s go</button></div>`),700)}
     else banner(`Welcome back`,`${st.name} · Day ${Math.floor(st.clock)}`)}
   if(isTouch){$('#joy').hidden=false;$('#mobUse').hidden=false;$('#hint').hidden=true}})}
-function snap(){const o={coins:0,rawFish:0,cookedFish:0,smokedFish:0,pearl:0,water:0,potato:0,melon:0,wood:0};for(const b of raft.bmap.values()){const s=bState(b);switch(b.data.type){case'trap':o.rawFish+=s.n|0;break;case'grill':if(s.t>=1)o.cookedFish+=s.fish|0;break;case'rain':case'still':o.water+=s.n|0;break;case'purifier':o.water+=s.done|0;break;case'planter':if(s.crop&&s.grow>=1)o[CROP[s.crop].item]+=1;break;case'net':o.wood+=(s.items||[]).length;break;case'smoker':o.smokedFish+=s.done|0;break;case'winch':o.wood+=(s.items||[]).length;break;case'buoy':o.coins=(o.coins||0)+(s.c|0);break;case'pearl':o.pearl+=s.n|0;break}}return o}
+function snap(){const o={coins:0,rawFish:0,cookedFish:0,smokedFish:0,pearl:0,water:0,potato:0,melon:0,wood:0,scrap:0};for(const b of raft.bmap.values()){const s=bState(b);switch(b.data.type){case'trap':o.rawFish+=s.n|0;break;case'grill':if(s.t>=1)o.cookedFish+=s.fish|0;break;case'rain':case'still':o.water+=s.n|0;break;case'purifier':o.water+=s.done|0;break;case'planter':if(s.crop&&s.grow>=1)o[CROP[s.crop].item]+=1;break;case'net':o.wood+=(s.items||[]).length;break;case'smoker':o.smokedFish+=s.done|0;break;case'winch':o.wood+=(s.items||[]).length;break;case'buoy':o.coins=(o.coins||0)+(s.c|0);break;case'pearl':o.pearl+=s.n|0;break;case'diver':o.scrap+=(s.n|0)*2;o.pearl+=s.p|0;break}}return o}
 // ---- Pip the hermit crab: idle auto-collector ----
 const crab={t:0,tgt:null,x:0.6,z:0.4,face:0,obj:null};
 function crabCollectAll(silent){const got={};const keep=st.inv;const snapInv={...keep};let n=0;
@@ -627,7 +639,7 @@ function frame(now){requestAnimationFrame(frame);const rdt=Math.min(0.1,(now-las
   // environment & render
   const ld=applySky(st.clock%1,env.rainK,dt);rain.intensity=env.rainK;rain.update(dt,camera);audio.update(dt,{rain:env.rainK,night:env.night,storm:env.rainK});
   sky.update(dt,camera);placeSun(ld,pw.x,pw.z,Math.min(24,raft.bounds()+4));
-  renderer.shadowMap.needsUpdate=true;pix.u.uNight.value=env.night;ocean.renderReflection(renderer,scene,camera);pix.render(scene,camera);
+  renderer.shadowMap.needsUpdate=true;renderer.info.reset();pix.u.uNight.value=env.night;ocean.renderReflection(renderer,scene,camera);pix.render(scene,camera);
 }
 // ================= boot =================
 buildHUD();applyState();PA.hold='rod';pl.x=1.5;pl.z=2.6;pl.face=0.6;
@@ -635,4 +647,4 @@ audio.vol={master:settings.master,music:settings.music,sfx:settings.sfx};$('#fps
 setLoad(90,'Setting the sun…');
 renderer.compile(scene,camera);
 requestAnimationFrame(t=>{last=t;frame(t);setLoad(100,'Ready');setTimeout(()=>{$('#loading').classList.add('done');$('#title').hidden=false;refreshTitle()},350)});
-window.__dw={throwHook,startCast,fishClick,eat,drink,give,openInventory,openHouseUpgrades,openPause,closeModal,sleep,updateGhost,renderer,settings,viewModel,get fishSt(){return fish.st},build:(type,i,j)=>{bsel=type;ghostCell=[i,j];if(type==='foundation')ghostCell.ok=raft.canFoundation(i,j)&&has(BP[type].cost);else{ghostCell.ok=raft.has(i,j)&&!raft.occupied(i,j)&&has(BP[type].cost)&&(!BP[type].edge||!!raft.edgeDir(i,j))}placeBuild()},get st(){return st},get mode(){return mode},pl,fish,sh,boatS,raft,debris,camera,cam,startGame,freshState,openShop,applyQuality,selectSlot,interact,get act(){return curAct},get keys(){return[...keys]},get modal(){return!!curModal}};
+window.__dw={throwHook,startCast,fishClick,eat,drink,give,openInventory,openHouseUpgrades,openPause,closeModal,sleep,updateGhost,simBuildings,stationAction,startSharkAttack,scareShark,renderer,settings,viewModel,get fishSt(){return fish.st},build:(type,i,j)=>{bsel=type;ghostCell=[i,j];if(type==='foundation')ghostCell.ok=raft.canFoundation(i,j)&&has(BP[type].cost);else{ghostCell.ok=raft.has(i,j)&&!raft.occupied(i,j)&&has(BP[type].cost)&&(!BP[type].edge||!!raft.edgeDir(i,j))}placeBuild()},get st(){return st},get mode(){return mode},pl,fish,sh,boatS,raft,debris,camera,cam,startGame,freshState,openShop,applyQuality,selectSlot,interact,get act(){return curAct},get keys(){return[...keys]},get modal(){return!!curModal}};
